@@ -246,6 +246,8 @@ Production deployment guide:
 
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 
+Vercel deployment is also supported via `api/index.js` + `vercel.json` rewrites.
+
 ## Troubleshooting
 
 - `401 Invalid signature`:

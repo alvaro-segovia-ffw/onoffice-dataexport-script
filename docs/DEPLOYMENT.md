@@ -123,3 +123,23 @@ git pull
 npm install --omit=dev
 sudo systemctl restart onoffice-wrapper
 ```
+
+## 9) Vercel Deployment (Alternative)
+
+This repository includes Vercel-compatible files:
+
+- `api/index.js` (serverless entrypoint)
+- `vercel.json` (rewrites from `/health`, `/apartments`, `/playground`)
+
+Steps:
+
+1. Import the repository into Vercel.
+2. Configure project environment variables (same values as `.env`):
+   - `ONOFFICE_TOKEN`
+   - `ONOFFICE_SECRET`
+   - `EXPORT_API_USERS`
+   - Optional runtime flags (`NODE_ENV`, rate limits, playground toggle).
+3. Deploy.
+4. Verify:
+   - `GET /health`
+   - signed `GET /apartments`
