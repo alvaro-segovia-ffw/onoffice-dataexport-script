@@ -11,8 +11,8 @@
       "description": "Local"
     },
     {
-      "url": "onoffice-api-wrapper-git-fe-f9f527-alvaro-segovia-ffws-projects.vercel.app",
-      "description": "Production (example)"
+      "url": "https://onoffice-api-wrapper-git-fe-f9f527-alvaro-segovia-ffws-projects.vercel.app",
+      "description": "Vercel Preview (active)"
     }
   ],
   "tags": [
