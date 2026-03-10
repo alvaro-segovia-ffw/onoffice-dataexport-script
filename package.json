@@ -1,7 +1,7 @@
 {
-  "name": "onoffice-test",
+  "name": "hope-apartments-api",
   "version": "1.0.0",
-  "description": "onOffice apartment export script and secured API",
+  "description": "Hope Apartments API for live onOffice apartment exports",
   "main": "export-apartments.js",
   "scripts": {
     "export": "node export-apartments.js",

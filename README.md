@@ -1,6 +1,6 @@
-# onoffice-test
+# Hope Apartments API
 
-Node.js API wrapper for onOffice that fetches live apartment data, normalizes it, and returns JSON to authorized partner clients.
+Hope Apartments API is a Node.js service that fetches live apartment data from onOffice, normalizes it, and returns JSON to authorized partner clients.
 
 ## Table of Contents
 

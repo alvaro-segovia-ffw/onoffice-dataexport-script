@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "onoffice-api-wrapper",
+    "title": "Hope Apartments API",
     "version": "1.0.0",
-    "description": "API wrapper for onOffice apartment data"
+    "description": "Hope Apartments API for onOffice apartment data"
   },
   "servers": [
     {
@@ -11,8 +11,8 @@
       "description": "Local"
     },
     {
-      "url": "https://onoffice-api-wrapper.vercel.app",
-      "description": "Vercel (active)"
+      "url": "https://api.hope-apartments.de",
+      "description": "Production"
     }
   ],
   "tags": [

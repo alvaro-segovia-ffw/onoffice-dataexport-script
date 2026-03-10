@@ -1,4 +1,4 @@
-# API Reference
+# Hope Apartments API Reference
 
 ## Base URL
 
@@ -11,7 +11,7 @@ http://localhost:3000
 Production example:
 
 ```text
-https://onoffice-api-wrapper.vercel.app
+https://api.hope-apartments.de
 ```
 
 ## Authentication

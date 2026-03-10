@@ -34,11 +34,11 @@ Fill production `.env` values.
 
 ## 3) Create systemd Service
 
-Create `/etc/systemd/system/onoffice-wrapper.service`:
+Create `/etc/systemd/system/hope-apartments-api.service`:
 
 ```ini
 [Unit]
-Description=onOffice Wrapper API
+Description=Hope Apartments API
 After=network.target
 
 [Service]
@@ -58,14 +58,14 @@ Then:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable onoffice-wrapper
-sudo systemctl start onoffice-wrapper
-sudo systemctl status onoffice-wrapper
+sudo systemctl enable hope-apartments-api
+sudo systemctl start hope-apartments-api
+sudo systemctl status hope-apartments-api
 ```
 
 ## 4) Nginx Reverse Proxy
 
-Create `/etc/nginx/sites-available/onoffice-wrapper`:
+Create `/etc/nginx/sites-available/hope-apartments-api`:
 
 ```nginx
 server {
@@ -86,7 +86,7 @@ server {
 Enable:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/onoffice-wrapper /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/hope-apartments-api /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -113,7 +113,7 @@ sudo ufw enable
 - Logs are healthy:
 
 ```bash
-sudo journalctl -u onoffice-wrapper -f
+sudo journalctl -u hope-apartments-api -f
 ```
 
 ## 8) Update Procedure
@@ -121,7 +121,7 @@ sudo journalctl -u onoffice-wrapper -f
 ```bash
 git pull
 npm install --omit=dev
-sudo systemctl restart onoffice-wrapper
+sudo systemctl restart hope-apartments-api
 ```
 
 ## 9) Vercel Deployment (Alternative)
