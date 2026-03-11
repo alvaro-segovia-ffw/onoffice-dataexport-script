@@ -9,6 +9,10 @@
     {
       "url": "http://localhost:3000",
       "description": "Local development"
+    },
+      {
+      "url": "https://onoffice-api-wrapper-production.up.railway.app",
+      "description": "Railway development"
     }
   ],
   "tags": [
