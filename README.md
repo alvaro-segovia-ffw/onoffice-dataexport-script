@@ -39,6 +39,7 @@ Each request performs a live sync from onOffice and returns transformed apartmen
 - Live fetch from onOffice on every request.
 - Consistent transformed JSON output.
 - Per-user authentication with token + secret.
+- Optional database-backed auth for real users (`/auth/login`, `/auth/me`).
 - Concurrency protection (single live sync at a time).
 - Web playground to test token/secret and inspect responses.
 - Optional CLI export script that writes JSON files to `exports/`.
@@ -112,8 +113,19 @@ Core variables:
 - `ONOFFICE_URL`: onOffice endpoint (default is stable API URL if omitted)
 - `ONOFFICE_TOKEN`: onOffice token
 - `ONOFFICE_SECRET`: onOffice secret
+- `DATABASE_URL`: PostgreSQL connection string for real users/auth
+- `DATABASE_SSL`: optional (`true/false`), default `true` in production
+- `JWT_ACCESS_SECRET`: required to enable `/auth/login` and `/auth/me`
+- `JWT_ACCESS_TTL`: optional JWT access token lifetime (default `15m`)
+- `JWT_ISSUER`: optional JWT issuer (default `hope-apartments-api`)
+- `JWT_AUDIENCE`: optional JWT audience (default `hope-apartments-clients`)
+- `BCRYPT_ROUNDS`: optional bcrypt cost (default `12`)
 - `EXPORT_API_PORT`: API port (example: `3000`)
 - `EXPORT_API_ENABLE_PLAYGROUND`: optional (`true/false`), default `true` in non-production and `false` in production
+- `DOCS_ENABLED`: optional (`true/false`), default `true` in non-production and `false` in production
+- `DOCS_BASIC_AUTH_ENABLED`: optional (`true/false`), default follows `DOCS_ENABLED`
+- `DOCS_BASIC_AUTH_USER`: required when docs Basic Auth is enabled
+- `DOCS_BASIC_AUTH_PASSWORD`: required when docs Basic Auth is enabled
 - `EXPORT_API_RATE_LIMIT_ENABLED`: optional (`true/false`), enables in-memory rate limiting on `GET /apartments`
 - `EXPORT_API_RATE_LIMIT_WINDOW_SEC`: optional positive integer window in seconds (default `60`)
 - `EXPORT_API_RATE_LIMIT_MAX_REQUESTS`: optional positive integer max requests per window (default `60`)
@@ -145,6 +157,8 @@ Generates timestamped JSON files under `exports/`.
 
 ### Endpoint
 
+- `POST /auth/login` (optional, database-backed auth)
+- `GET /auth/me` (optional, requires Bearer token)
 - `GET /apartments` (protected)
 - `GET /health` (unprotected health check)
 - `GET /openapi.json` (OpenAPI spec)
@@ -155,11 +169,34 @@ Generates timestamped JSON files under `exports/`.
 - Triggers live sync from onOffice on every call.
 - Returns transformed JSON data.
 - Returns `409` if another live sync is in progress.
+- `POST /auth/login` and `GET /auth/me` return `503` until `DATABASE_URL` and `JWT_ACCESS_SECRET` are configured.
 
 ### Health Check
 
 - `GET /health`
-- Returns service status and uptime for load balancer / monitoring probes.
+- Returns service status, uptime, and whether database-backed auth is enabled.
+
+### Auth Endpoints
+
+The current API keeps backward compatibility with `x-api-token` + `x-api-secret` for `GET /apartments`.
+In parallel, you can enable real user auth backed by PostgreSQL.
+
+#### Login
+
+```bash
+curl -X POST "http://localhost:3000/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"replace-me"}'
+```
+
+#### Current User
+
+```bash
+ACCESS_TOKEN="replace_with_bearer_token"
+
+curl -X GET "http://localhost:3000/auth/me" \
+  -H "Authorization: Bearer ${ACCESS_TOKEN}"
+```
 
 ## Swagger
 
@@ -167,6 +204,16 @@ Generates timestamped JSON files under `exports/`.
 - `GET /docs`: interactive Swagger UI
 
 Swagger documents the current header contract for direct authentication with token + secret.
+In production, docs are disabled by default. If you enable them, protect them with Basic Auth.
+
+Example:
+
+```env
+DOCS_ENABLED=true
+DOCS_BASIC_AUTH_ENABLED=true
+DOCS_BASIC_AUTH_USER=docs_admin
+DOCS_BASIC_AUTH_PASSWORD=replace_with_a_long_random_secret
+```
 
 ### Required Headers
 
@@ -248,3 +295,4 @@ Railway deployment guide:
 ## Additional Docs
 
 - [docs/SECURITY.md](docs/SECURITY.md)
+- [docs/sql/001_auth_schema.sql](docs/sql/001_auth_schema.sql)

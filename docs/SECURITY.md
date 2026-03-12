@@ -20,6 +20,9 @@
 - Remove inactive partners promptly.
 - Keep partner IDs descriptive (`partner-a`, `partner-b`, etc.).
 - Enable rate limiting for `/apartments` to reduce brute-force and abuse.
+- Do not expose `/docs` or `/openapi.json` publicly in production.
+- Keep `DOCS_ENABLED=false` unless documentation must be reachable.
+- If docs are enabled, require `DOCS_BASIC_AUTH_USER` and `DOCS_BASIC_AUTH_PASSWORD`.
 
 ## Transport Security
 
