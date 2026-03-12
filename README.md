@@ -164,6 +164,7 @@ Generates timestamped JSON files under `exports/`.
 - `PATCH /api-keys/:id` (admin/developer)
 - `POST /api-keys/:id/revoke` (admin/developer)
 - `POST /api-keys/:id/reactivate` (admin/developer)
+- `POST /api-keys/:id/rotate` (admin/developer)
 - `GET /health` (unprotected health check)
 - `GET /openapi.json` (OpenAPI spec)
 - `GET /docs` (Swagger UI)
@@ -234,6 +235,7 @@ curl -X GET "http://localhost:3000/apartments" \
 ```
 
 List / read / update / revoke / reactivate API keys require a JWT from a user with role `admin` or `developer`.
+Rotate returns a brand new secret once and revokes the previous key atomically.
 
 ## Swagger
 

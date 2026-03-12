@@ -367,6 +367,25 @@
           "404": { "description": "Not found" }
         }
       }
+    },
+    "/api-keys/{id}/rotate": {
+      "post": {
+        "tags": ["API Keys"],
+        "summary": "Rotate API key",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "API key rotated" },
+          "404": { "description": "Not found" }
+        }
+      }
     }
   },
   "components": {

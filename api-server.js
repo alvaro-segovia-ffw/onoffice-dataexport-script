@@ -10,6 +10,7 @@ const {
   listApiKeys,
   reactivateApiKey,
   revokeApiKey,
+  rotateApiKey,
   updateApiKey,
 } = require('./lib/api-key-service');
 const { writeAuditLog } = require('./lib/audit-service');
@@ -56,7 +57,7 @@ const AUTH_ENABLED = isAuthConfigured();
 
 function parseUsers(raw) {
   if (!raw) {
-    throw new Error('Missing EXPORT_API_USERS env var. Provide a JSON array of users.');
+    return new Map();
   }
 
   let users;
@@ -67,7 +68,7 @@ function parseUsers(raw) {
   }
 
   if (!Array.isArray(users) || users.length === 0) {
-    throw new Error('EXPORT_API_USERS must be a non-empty JSON array.');
+    return new Map();
   }
 
   const byToken = new Map();
@@ -416,6 +417,46 @@ app.post('/api-keys/:id/reactivate', ...requireApiKeyAdmin, async (req, res) => 
   } catch (err) {
     return res.status(500).json({
       error: 'ApiKeyReactivateFailed',
+      message: err.message || 'Unknown error',
+    });
+  }
+});
+
+app.post('/api-keys/:id/rotate', ...requireApiKeyAdmin, async (req, res) => {
+  if (!isApiKeyServiceConfigured()) {
+    return res.status(503).json({
+      error: 'ApiKeyServiceNotConfigured',
+      message: 'API key service requires DATABASE_URL.',
+    });
+  }
+
+  try {
+    const rotated = await rotateApiKey(req.params.id);
+    if (!rotated) {
+      return res.status(404).json({
+        error: 'NotFound',
+        message: 'API key not found.',
+      });
+    }
+
+    await writeAuditLog({
+      actorUserId: req.auth.sub,
+      action: 'api_key_rotated',
+      resourceType: 'api_key',
+      resourceId: rotated.apiKey.id,
+      ip: req.ip,
+      userAgent: req.header('user-agent'),
+      metadata: {
+        previousApiKeyId: rotated.previousApiKeyId,
+        partnerId: rotated.apiKey.partnerId,
+        keyPrefix: rotated.apiKey.keyPrefix,
+      },
+    });
+
+    return res.json(rotated);
+  } catch (err) {
+    return res.status(500).json({
+      error: 'ApiKeyRotateFailed',
       message: err.message || 'Unknown error',
     });
   }
