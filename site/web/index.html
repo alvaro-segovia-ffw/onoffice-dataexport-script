@@ -4,17 +4,29 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hope Apartments API</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="/site/styles.css" />
   </head>
   <body>
     <div class="page-shell">
       <header class="topbar">
-        <a class="brand" href="/">Hope Apartments API</a>
+        <a class="brand" href="/">
+          <img class="brand-mark" src="/site/imgs/hope-logo.png" alt="Hope Apartments logo" />
+          <span class="brand-copy">
+            <strong>Hope Apartments</strong>
+            <span>API Platform</span>
+          </span>
+        </a>
         <nav class="nav">
           <a href="/docs/public">Public Docs</a>
-          <a href="/admin/login">Login</a>
           <a href="/health">Health</a>
-          <a class="nav-cta" href="/admin/dashboard">Admin Dashboard</a>
+          <a href="/admin/dashboard">Admin Dashboard</a>
+          <a class="nav-cta" href="/admin/login">Login</a>
         </nav>
       </header>
 
@@ -22,28 +34,31 @@
         <section class="hero">
           <div class="hero-copy">
             <p class="eyebrow">Operational Platform</p>
-            <h1>Partner integrations and internal operations, under one API surface.</h1>
+            <h1>Welcome to Hope Apartments.</h1>
             <p class="lede">
-              Hope Apartments API powers partner apartment exports, internal API key management,
-              and protected administrative tooling from a single Railway-hosted service.
+              A single platform for partner-facing apartment integrations, internal API key
+              operations, and protected administrative tooling.
             </p>
             <div class="hero-actions">
               <a class="button primary" href="/docs/public">Open Partner Docs</a>
-              <a class="button secondary" href="/admin/login">Admin Login</a>
+              <a class="button secondary" href="/admin/login">Login</a>
             </div>
           </div>
           <aside class="hero-panel">
-            <p class="panel-label">Quick Access</p>
-            <ul class="link-list">
-              <li><a href="/docs/public">Public partner documentation</a></li>
-              <li><a href="/admin/login">Admin console login</a></li>
-              <li><a href="/admin/dashboard">Admin dashboard</a></li>
-              <li><a href="/health">System health endpoint</a></li>
-            </ul>
-            <p class="panel-note">
-              Administrative features require an authenticated <code>admin</code> or
-              <code>developer</code> session.
-            </p>
+            <img class="hero-banner" src="/site/imgs/hope_banner.png" alt="Hope Apartments Berlin skyline banner" />
+            <div class="hero-panel-body">
+              <p class="panel-label">Quick Access</p>
+              <ul class="link-list">
+                <li><a href="/docs/public">Public partner documentation</a></li>
+                <li><a href="/admin/login">Admin console login</a></li>
+                <li><a href="/admin/dashboard">Admin dashboard</a></li>
+                <li><a href="/health">System health endpoint</a></li>
+              </ul>
+              <p class="panel-note">
+                Administrative features require an authenticated <code>admin</code> or
+                <code>developer</code> session.
+              </p>
+            </div>
           </aside>
         </section>
 

@@ -4,9 +4,9 @@
   --ink: #1d1a16;
   --muted: #62584b;
   --line: #d4c8b8;
-  --brand: #0f4c5c;
-  --brand-strong: #0a3640;
-  --accent: #b56a2d;
+  --brand: #d3a33a;
+  --brand-strong: #b7841f;
+  --accent: #8d5c23;
   --shadow: rgba(39, 28, 16, 0.1);
 }
 
@@ -20,8 +20,8 @@ body {
   color: var(--ink);
   font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
   background:
-    radial-gradient(circle at top left, rgba(15, 76, 92, 0.12), transparent 30%),
-    linear-gradient(180deg, rgba(181, 106, 45, 0.08), transparent 28%),
+    radial-gradient(circle at top left, rgba(211, 163, 58, 0.16), transparent 28%),
+    linear-gradient(180deg, rgba(141, 92, 35, 0.08), transparent 28%),
     var(--bg);
 }
 
@@ -44,11 +44,39 @@ body {
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
   color: var(--ink);
   text-decoration: none;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 24px;
+}
+
+.brand-mark {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  object-fit: cover;
+}
+
+.brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.brand-copy strong {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 32px;
   font-weight: 700;
+  line-height: 0.95;
+}
+
+.brand-copy span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .nav {
@@ -68,7 +96,7 @@ body {
   border-radius: 999px;
   padding: 10px 16px;
   background: var(--brand);
-  color: #f6f2ec !important;
+  color: #22180d !important;
 }
 
 .hero {
@@ -88,11 +116,7 @@ body {
 }
 
 .hero-copy {
-  padding: 28px;
-}
-
-.hero-panel {
-  padding: 24px;
+  padding: 32px 32px 34px;
 }
 
 .eyebrow,
@@ -109,17 +133,17 @@ body {
 h1,
 h2 {
   margin: 0;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Cormorant Garamond", Georgia, serif;
 }
 
 h1 {
-  font-size: clamp(36px, 5vw, 64px);
-  line-height: 1.04;
-  max-width: 12ch;
+  font-size: clamp(52px, 7vw, 82px);
+  line-height: 0.92;
+  max-width: 10ch;
 }
 
 h2 {
-  font-size: 28px;
+  font-size: 34px;
 }
 
 .lede,
@@ -155,12 +179,28 @@ h2 {
 
 .button.primary {
   background: var(--brand);
-  color: #f6f2ec;
+  color: #22180d;
 }
 
 .button.secondary {
   background: #eadfcf;
   color: var(--ink);
+}
+
+.hero-panel {
+  overflow: hidden;
+  padding: 0;
+}
+
+.hero-banner {
+  display: block;
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+}
+
+.hero-panel-body {
+  padding: 24px;
 }
 
 .link-list {
@@ -202,6 +242,14 @@ h2 {
   font-weight: 700;
 }
 
+.button:hover,
+.nav-cta:hover,
+.text-link:hover,
+.nav a:hover,
+.link-list a:hover {
+  opacity: 0.84;
+}
+
 code {
   font-family: "IBM Plex Mono", monospace;
 }
@@ -215,5 +263,13 @@ code {
   .topbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .brand-copy strong {
+    font-size: 28px;
+  }
+
+  h1 {
+    font-size: clamp(42px, 10vw, 62px);
   }
 }
