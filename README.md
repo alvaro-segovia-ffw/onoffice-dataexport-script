@@ -118,6 +118,7 @@ Core variables:
 - `DATABASE_SSL`: optional (`true/false`), default `true` in production
 - `JWT_ACCESS_SECRET`: required to enable `/auth/login` and `/auth/me`
 - `JWT_ACCESS_TTL`: optional JWT access token lifetime (default `15m`)
+- `AUTH_REFRESH_TOKEN_TTL_DAYS`: optional refresh token lifetime in days (default `30`)
 - `JWT_ISSUER`: optional JWT issuer (default `hope-apartments-api`)
 - `JWT_AUDIENCE`: optional JWT audience (default `hope-apartments-clients`)
 - `BCRYPT_ROUNDS`: optional bcrypt cost (default `12`)
@@ -125,6 +126,7 @@ Core variables:
 - `EXPORT_API_ENABLE_PLAYGROUND`: optional (`true/false`), default `true` in non-production and `false` in production
 - `ADMIN_UI_ENABLED`: optional (`true/false`), default `true` in non-production and `false` in production
 - `DOCS_ENABLED`: optional (`true/false`), default `true` in non-production and `false` in production
+- `PUBLIC_DOCS_ENABLED`: optional (`true/false`), default `false`, enables partner-facing public docs
 - `EXPORT_API_RATE_LIMIT_ENABLED`: optional (`true/false`), enables in-memory rate limiting on `GET /apartments`
 - `EXPORT_API_RATE_LIMIT_WINDOW_SEC`: optional positive integer window in seconds (default `60`)
 - `EXPORT_API_RATE_LIMIT_MAX_REQUESTS`: optional positive integer max requests per window (default `60`)
@@ -151,16 +153,32 @@ If `ADMIN_UI_ENABLED=true`, an internal operational UI is served at:
 - `GET /admin/login`
 - `GET /admin`
 
-`/admin/login` signs in via `POST /auth/login` and redirects to `/admin`.
-The dashboard uses the stored admin session and redirects back to `/admin/login` if there is no valid token.
+`/admin/login` signs in via `POST /admin/login`, which creates a secure `HttpOnly` admin session cookie.
+`/admin` redirects to `/admin/dashboard`, and the dashboard redirects back to `/admin/login` if there is no valid admin/developer session.
+The backend re-validates the user against PostgreSQL roles for admin console routes and operational endpoints.
 Use it for:
 
-- signing in with email/password via `POST /auth/login`
+- signing in with email/password via `POST /admin/login`
 - viewing API key stats
 - listing API keys
 - creating keys
 - revoking, reactivating, rotating keys
 - browsing recent audit logs
+
+### Documentation Split
+
+The service supports two documentation surfaces:
+
+- Public partner docs
+  - `GET /openapi.public.json`
+  - `GET /docs/public`
+  - enabled with `PUBLIC_DOCS_ENABLED=true`
+  - contains only partner-facing integration endpoints
+- Private internal docs
+  - `GET /openapi.json`
+  - `GET /docs`
+  - enabled with `DOCS_ENABLED=true`
+  - protected with internal auth and includes operational endpoints
 
 ### CLI Export Mode
 
@@ -175,6 +193,8 @@ Generates timestamped JSON files under `exports/`.
 ### Endpoint
 
 - `POST /auth/login` (optional, database-backed auth)
+- `POST /auth/refresh` (optional, rotates human refresh tokens)
+- `POST /auth/logout` (optional, revokes human refresh tokens)
 - `GET /auth/me` (optional, requires Bearer token)
 - `GET /apartments` (protected)
 - `GET /api-keys` (admin/developer)
@@ -189,6 +209,8 @@ Generates timestamped JSON files under `exports/`.
 - `GET /health` (unprotected health check)
 - `GET /openapi.json` (OpenAPI spec)
 - `GET /docs` (Swagger UI)
+- `GET /openapi.public.json` (public partner OpenAPI spec)
+- `GET /docs/public` (public partner Swagger UI)
 
 ### Behavior
 
@@ -213,6 +235,26 @@ In parallel, you can enable real user auth backed by PostgreSQL and partner auth
 curl -X POST "http://localhost:3000/auth/login" \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@example.com","password":"replace-me"}'
+```
+
+#### Refresh Session
+
+```bash
+REFRESH_TOKEN="replace_with_refresh_token"
+
+curl -X POST "http://localhost:3000/auth/refresh" \
+  -H "Content-Type: application/json" \
+  -d "{\"refreshToken\":\"${REFRESH_TOKEN}\"}"
+```
+
+#### Logout Session
+
+```bash
+REFRESH_TOKEN="replace_with_refresh_token"
+
+curl -X POST "http://localhost:3000/auth/logout" \
+  -H "Content-Type: application/json" \
+  -d "{\"refreshToken\":\"${REFRESH_TOKEN}\"}"
 ```
 
 #### Current User
@@ -284,16 +326,20 @@ curl -X GET "http://localhost:3000/audit-logs?partnerId=roombae&limit=20" \
 
 ## Swagger
 
-- `GET /openapi.json`: raw OpenAPI document
-- `GET /docs`: interactive Swagger UI
+- `GET /openapi.public.json`: raw partner-facing OpenAPI document
+- `GET /docs/public`: public partner Swagger UI
+- `GET /openapi.json`: raw internal OpenAPI document
+- `GET /docs`: internal interactive Swagger UI
 
-Swagger documents the current header contract for direct authentication with token + secret.
-In production, docs are disabled by default. If you enable them, access is restricted to authenticated users with roles `admin`, `developer`, or `client`.
+Public docs are intended only for the partner integration surface.
+Internal docs include operational and admin endpoints.
+In production, private docs are disabled by default. If you enable them, access is restricted to authenticated users with roles `admin`, `developer`, or `client`.
 
 Example:
 
 ```env
 DOCS_ENABLED=true
+PUBLIC_DOCS_ENABLED=true
 ```
 
 Docs access:

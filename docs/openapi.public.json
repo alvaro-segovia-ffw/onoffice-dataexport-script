@@ -1,0 +1,390 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Hope Apartments Partner API",
+    "version": "1.0.0",
+    "description": "Public partner-facing documentation for the Hope Apartments API. This spec only includes the integration surface required by external partners."
+  },
+  "servers": [
+    {
+      "url": "https://api.hope-apartments.de",
+      "description": "Production"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Apartments",
+      "description": "Partner apartment export endpoint"
+    }
+  ],
+  "paths": {
+    "/apartments": {
+      "get": {
+        "tags": ["Apartments"],
+        "summary": "Fetch live apartment data",
+        "description": "Returns normalized apartments from onOffice. Partners should authenticate with X-API-Key. Legacy x-api-token + x-api-secret is supported only during migration and is not documented publicly.",
+        "security": [
+          {
+            "partnerApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Partner API key in the format provided by Hope Apartments."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Normalized apartment payload",
+            "headers": {
+              "x-data-source": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Data source marker",
+                "example": "live-onoffice"
+              },
+              "x-ratelimit-limit": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-ratelimit-remaining": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-ratelimit-reset": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "apartments": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Apartment"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "required": ["apartments", "meta"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another sync is already running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "retry-after": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Upstream fetch or mapping failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "partnerApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    },
+    "schemas": {
+      "Apartment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "123"
+          },
+          "address": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "roomsTotal": {
+            "type": "number",
+            "nullable": true,
+            "example": 3
+          },
+          "bedrooms": {
+            "type": "number",
+            "nullable": true,
+            "example": 2
+          },
+          "bathrooms": {
+            "type": "number",
+            "nullable": true,
+            "example": 1
+          },
+          "areaSqft": {
+            "type": "number",
+            "nullable": true,
+            "example": 538.19
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Photo"
+            }
+          },
+          "features": {
+            "$ref": "#/components/schemas/Features"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "locationDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "equipmentDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          },
+          "rent": {
+            "$ref": "#/components/schemas/Rent"
+          },
+          "deposit": {
+            "type": "string",
+            "nullable": true
+          },
+          "floorLevel": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "address",
+          "roomsTotal",
+          "bedrooms",
+          "bathrooms",
+          "areaSqft",
+          "photos",
+          "features",
+          "description",
+          "locationDescription",
+          "equipmentDescription",
+          "availability",
+          "rent",
+          "deposit",
+          "floorLevel"
+        ]
+      },
+      "Address": {
+        "type": "object",
+        "properties": {
+          "buildingNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "streetName": {
+            "type": "string",
+            "nullable": true
+          },
+          "neighborhood": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "city": {
+            "type": "string",
+            "nullable": true
+          },
+          "zipCode": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["buildingNumber", "streetName", "neighborhood", "city", "zipCode"]
+      },
+      "Photo": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "originalname": {
+            "type": "string",
+            "nullable": true
+          },
+          "modified": {
+            "nullable": true,
+            "oneOf": [
+              { "type": "string" },
+              { "type": "number" }
+            ]
+          }
+        },
+        "required": ["url", "type", "title", "originalname", "modified"]
+      },
+      "Features": {
+        "type": "object",
+        "properties": {
+          "elevator": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "balcony": {
+            "type": "boolean"
+          },
+          "furnished": {
+            "type": "boolean",
+            "nullable": true
+          }
+        },
+        "required": ["elevator", "balcony", "furnished"]
+      },
+      "Availability": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "nullable": true,
+            "example": "2026-05-01"
+          },
+          "until": {
+            "type": "string",
+            "nullable": true,
+            "example": "2026-12-31"
+          }
+        },
+        "required": ["from", "until"]
+      },
+      "Rent": {
+        "type": "object",
+        "properties": {
+          "warmRent": {
+            "type": "number",
+            "nullable": true,
+            "example": 1200
+          },
+          "coldRent": {
+            "type": "number",
+            "nullable": true,
+            "example": 1000
+          },
+          "currency": {
+            "type": "string",
+            "example": "EUR"
+          }
+        },
+        "required": ["warmRent", "coldRent", "currency"]
+      },
+      "ResponseMeta": {
+        "type": "object",
+        "properties": {
+          "requestedBy": {
+            "type": "string",
+            "example": "partner-a"
+          },
+          "authType": {
+            "type": "string",
+            "example": "api_key"
+          },
+          "count": {
+            "type": "integer",
+            "example": 84
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "durationMs": {
+            "type": "integer",
+            "example": 3000
+          }
+        },
+        "required": ["requestedBy", "authType", "count", "startedAt", "finishedAt", "durationMs"]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["error", "message"]
+      }
+    }
+  }
+}

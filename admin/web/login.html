@@ -32,6 +32,7 @@
           </label>
           <div class="actions">
             <button id="btnLogin" type="submit">Sign In</button>
+            <button id="btnClear" type="button" class="ghost">Clear</button>
           </div>
         </form>
 
@@ -39,18 +40,6 @@
           <span id="loginStatus" class="status">idle</span>
           <span id="sessionSummary" class="session-summary">No active session.</span>
         </div>
-
-        <details class="token-fallback">
-          <summary>Use an existing Bearer token</summary>
-          <label>
-            Bearer Token
-            <textarea id="accessToken" rows="5" placeholder="Paste JWT access token"></textarea>
-          </label>
-          <div class="actions">
-            <button id="btnUseToken" type="button" class="ghost">Use Token</button>
-            <button id="btnClear" type="button" class="ghost">Clear</button>
-          </div>
-        </details>
       </section>
     </main>
 

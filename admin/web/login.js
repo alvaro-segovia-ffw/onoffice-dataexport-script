@@ -1,7 +1,7 @@
 'use strict';
 
-const storageKey = 'hope-admin-token';
 const dashboardPath = '/admin/dashboard';
+const allowedRoles = new Set(['admin', 'developer']);
 
 const els = {
   baseUrl: document.getElementById('baseUrl'),
@@ -10,8 +10,6 @@ const els = {
   loginPassword: document.getElementById('loginPassword'),
   loginStatus: document.getElementById('loginStatus'),
   sessionSummary: document.getElementById('sessionSummary'),
-  accessToken: document.getElementById('accessToken'),
-  btnUseToken: document.getElementById('btnUseToken'),
   btnClear: document.getElementById('btnClear'),
 };
 
@@ -30,21 +28,18 @@ function setSessionSummary(text) {
   els.sessionSummary.textContent = text;
 }
 
-function storeToken(token) {
-  localStorage.setItem(storageKey, String(token || '').trim());
-}
-
-function clearToken() {
-  localStorage.removeItem(storageKey);
+function hasAdminConsoleAccess(user) {
+  const roles = Array.isArray(user?.roles) ? user.roles : [];
+  return roles.some((role) => allowedRoles.has(role));
 }
 
 async function parseJsonResponse(res) {
   return res.json().catch(() => ({}));
 }
 
-async function fetchCurrentUser(token) {
-  const res = await fetch(`${normalizedBaseUrl()}/auth/me`, {
-    headers: { Authorization: `Bearer ${token}` },
+async function fetchAdminSession() {
+  const res = await fetch(`${normalizedBaseUrl()}/admin/session`, {
+    credentials: 'include',
   });
   const payload = await parseJsonResponse(res);
   if (!res.ok) {
@@ -70,17 +65,20 @@ async function login(event) {
   }
 
   try {
-    const res = await fetch(`${normalizedBaseUrl()}/auth/login`, {
+    const res = await fetch(`${normalizedBaseUrl()}/admin/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
+      credentials: 'include',
     });
     const payload = await parseJsonResponse(res);
     if (!res.ok) {
       throw new Error(payload?.message || `HTTP ${res.status}`);
     }
+    if (!hasAdminConsoleAccess(payload.user)) {
+      throw new Error('Only admin or developer users can access the admin console.');
+    }
 
-    storeToken(payload.accessToken || '');
     setStatus(els.loginStatus, 'signed in', true);
     setSessionSummary(`${payload.user?.email || email} (${(payload.user?.roles || []).join(', ') || 'no roles'})`);
     els.loginPassword.value = '';
@@ -91,52 +89,33 @@ async function login(event) {
   }
 }
 
-async function useExistingToken() {
-  const token = String(els.accessToken.value || '').trim();
-  if (!token) {
-    setStatus(els.loginStatus, 'error', false);
-    setSessionSummary('Bearer token is required.');
-    return;
-  }
-
-  setStatus(els.loginStatus, 'validating token...', null);
-  try {
-    const user = await fetchCurrentUser(token);
-    storeToken(token);
-    setStatus(els.loginStatus, 'token accepted', true);
-    setSessionSummary(`${user?.email || 'User'} (${(user?.roles || []).join(', ') || 'no roles'})`);
-    redirectToDashboard();
-  } catch (err) {
-    setStatus(els.loginStatus, 'error', false);
-    setSessionSummary(err.message);
-  }
-}
-
 async function bootstrap() {
-  const token = localStorage.getItem(storageKey);
-  if (!token) return;
-
   setStatus(els.loginStatus, 'checking session...', null);
   try {
-    const user = await fetchCurrentUser(token);
+    const user = await fetchAdminSession();
+    if (!hasAdminConsoleAccess(user)) {
+      setStatus(els.loginStatus, 'forbidden', false);
+      setSessionSummary('Only admin or developer users can access the admin console.');
+      return;
+    }
     setStatus(els.loginStatus, 'session ready', true);
     setSessionSummary(`${user?.email || 'User'} (${(user?.roles || []).join(', ') || 'no roles'})`);
     redirectToDashboard();
   } catch (_err) {
-    clearToken();
     setStatus(els.loginStatus, 'idle', null);
     setSessionSummary('No active session.');
   }
 }
 
 els.loginForm.addEventListener('submit', login);
-els.btnUseToken.addEventListener('click', useExistingToken);
-els.btnClear.addEventListener('click', () => {
-  clearToken();
-  els.accessToken.value = '';
+els.btnClear.addEventListener('click', async () => {
   els.loginPassword.value = '';
   setStatus(els.loginStatus, 'idle', null);
   setSessionSummary('No active session.');
+  await fetch(`${normalizedBaseUrl()}/admin/logout`, {
+    method: 'POST',
+    credentials: 'include',
+  }).catch(() => {});
 });
 
 bootstrap();

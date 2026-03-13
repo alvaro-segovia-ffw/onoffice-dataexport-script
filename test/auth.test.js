@@ -5,6 +5,12 @@ const assert = require('node:assert/strict');
 
 const { hashPassword, verifyPassword } = require('../lib/password');
 const { getJwtConfig, signAccessToken, verifyAccessToken } = require('../lib/jwt');
+const {
+  buildRefreshTokenExpiry,
+  generateRefreshToken,
+  getRefreshTokenConfig,
+  hashRefreshToken,
+} = require('../lib/refresh-token');
 
 test('password helpers hash and verify passwords', async () => {
   const hash = await hashPassword('S3cret!');
@@ -38,5 +44,27 @@ test('jwt helpers sign and verify access tokens', () => {
     delete process.env.JWT_ACCESS_TTL;
   } else {
     process.env.JWT_ACCESS_TTL = previousTtl;
+  }
+});
+
+test('refresh token helpers generate hashable tokens and support ttl override', () => {
+  const previousTtlDays = process.env.AUTH_REFRESH_TOKEN_TTL_DAYS;
+  process.env.AUTH_REFRESH_TOKEN_TTL_DAYS = '14';
+
+  const token = generateRefreshToken();
+  const hashA = hashRefreshToken(token);
+  const hashB = hashRefreshToken(token);
+  const expiry = buildRefreshTokenExpiry(new Date('2026-03-13T00:00:00.000Z'));
+
+  assert.ok(token.length > 20);
+  assert.equal(hashA, hashB);
+  assert.equal(hashA.length, 64);
+  assert.equal(getRefreshTokenConfig().ttlDays, 14);
+  assert.equal(expiry.toISOString(), '2026-03-27T00:00:00.000Z');
+
+  if (previousTtlDays === undefined) {
+    delete process.env.AUTH_REFRESH_TOKEN_TTL_DAYS;
+  } else {
+    process.env.AUTH_REFRESH_TOKEN_TTL_DAYS = previousTtlDays;
   }
 });

@@ -1,6 +1,5 @@
 'use strict';
 
-const storageKey = 'hope-admin-token';
 const loginPath = '/admin/login';
 
 const els = {
@@ -34,24 +33,8 @@ function normalizedBaseUrl() {
   return (els.baseUrl.value || '').trim().replace(/\/+$/, '') || window.location.origin;
 }
 
-function getStoredToken() {
-  return localStorage.getItem(storageKey) || '';
-}
-
-function getToken() {
-  const token = getStoredToken().trim();
-  if (!token) {
-    throw new Error('Missing admin session.');
-  }
-  return token;
-}
-
 function redirectToLogin() {
   window.location.href = loginPath;
-}
-
-function clearSession() {
-  localStorage.removeItem(storageKey);
 }
 
 function writeJson(el, payload) {
@@ -63,9 +46,7 @@ async function parseJsonResponse(res) {
 }
 
 async function apiFetch(path, options = {}) {
-  const token = getToken();
   const headers = new Headers(options.headers || {});
-  headers.set('Authorization', `Bearer ${token}`);
   if (options.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
@@ -73,11 +54,11 @@ async function apiFetch(path, options = {}) {
   const res = await fetch(`${normalizedBaseUrl()}${path}`, {
     ...options,
     headers,
+    credentials: 'include',
   });
 
   const payload = await parseJsonResponse(res);
   if (res.status === 401 || res.status === 403) {
-    clearSession();
     throw new Error(payload?.message || 'Session expired or not authorized.');
   }
   if (!res.ok) {
@@ -161,7 +142,7 @@ async function loadStats() {
   } catch (err) {
     setStatus(els.statsStatus, 'error', false);
     writeJson(els.keyActionOutput, { error: err.message });
-    if (/session|authorized/i.test(err.message)) redirectToLogin();
+    if (/session|authorized|role/i.test(err.message)) redirectToLogin();
   }
 }
 
@@ -174,7 +155,7 @@ async function loadApiKeys() {
   } catch (err) {
     setStatus(els.keysStatus, 'error', false);
     writeJson(els.keyActionOutput, { error: err.message });
-    if (/session|authorized/i.test(err.message)) redirectToLogin();
+    if (/session|authorized|role/i.test(err.message)) redirectToLogin();
   }
 }
 
@@ -194,7 +175,7 @@ async function loadAuditLogs(filters = {}) {
   } catch (err) {
     setStatus(els.auditStatus, 'error', false);
     writeJson(els.auditOutput, { error: err.message });
-    if (/session|authorized/i.test(err.message)) redirectToLogin();
+    if (/session|authorized|role/i.test(err.message)) redirectToLogin();
   }
 }
 
@@ -226,7 +207,7 @@ async function createApiKey(event) {
   } catch (err) {
     setStatus(els.createStatus, 'error', false);
     writeJson(els.createOutput, { error: err.message });
-    if (/session|authorized/i.test(err.message)) redirectToLogin();
+    if (/session|authorized|role/i.test(err.message)) redirectToLogin();
   }
 }
 
@@ -250,12 +231,12 @@ async function handleKeyAction(event) {
     await Promise.all([loadApiKeys(), loadStats(), loadAuditLogs({ limit: 20 })]);
   } catch (err) {
     writeJson(els.keyActionOutput, { error: err.message, action, id });
-    if (/session|authorized/i.test(err.message)) redirectToLogin();
+    if (/session|authorized|role/i.test(err.message)) redirectToLogin();
   }
 }
 
 async function fetchCurrentSession() {
-  const payload = await apiFetch('/auth/me');
+  const payload = await apiFetch('/admin/session');
   renderSession(payload.user || null);
   return payload.user || null;
 }
@@ -265,32 +246,27 @@ async function loadDashboard() {
 }
 
 async function bootstrap() {
-  const token = getStoredToken().trim();
-  if (!token) {
-    redirectToLogin();
-    return;
-  }
-
   setStatus(els.loginStatus, 'checking session...', null);
   try {
     const user = await fetchCurrentSession();
-    setStatus(els.loginStatus, 'session ready', true);
     if (!user) {
-      clearSession();
       redirectToLogin();
       return;
     }
+    setStatus(els.loginStatus, 'session ready', true);
     await loadDashboard();
   } catch (_err) {
     setStatus(els.loginStatus, 'token invalid', false);
-    clearSession();
     redirectToLogin();
   }
 }
 
 els.btnLoad.addEventListener('click', loadDashboard);
-els.btnClear.addEventListener('click', () => {
-  clearSession();
+els.btnClear.addEventListener('click', async () => {
+  await fetch(`${normalizedBaseUrl()}/admin/logout`, {
+    method: 'POST',
+    credentials: 'include',
+  }).catch(() => {});
   redirectToLogin();
 });
 els.createForm.addEventListener('submit', createApiKey);

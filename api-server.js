@@ -2,7 +2,13 @@
 
 const express = require('express');
 const path = require('path');
-const { loginWithPassword, getUserProfile, isAuthConfigured } = require('./lib/auth-service');
+const {
+  loginWithPassword,
+  getUserProfile,
+  isAuthConfigured,
+  refreshUserSession,
+  revokeRefreshToken,
+} = require('./lib/auth-service');
 const {
   createApiKey,
   findApiKeyById,
@@ -15,14 +21,20 @@ const {
   updateApiKey,
 } = require('./lib/api-key-service');
 const { listAuditLogs, writeAuditLog } = require('./lib/audit-service');
+const { serializeCookie } = require('./lib/cookies');
 const { loadDotEnv } = require('./lib/load-dotenv');
 const { fetchApartmentsLive } = require('./lib/apartment-export');
 const { safeCompare } = require('./lib/safe-compare');
 const { docsAvailabilityMiddleware, requireDocsAccess } = require('./middlewares/docs-access');
+const {
+  adminCookieName,
+  requireAdminOperator,
+  requireAdminPageSession,
+  userHasAdminConsoleAccess,
+} = require('./middlewares/require-admin-operator');
 const { requireConfiguredAuth } = require('./middlewares/require-configured-auth');
 const { requireAuth } = require('./middlewares/require-auth');
 const { requireLegacyOrApiKeyAuth } = require('./middlewares/require-legacy-or-api-key-auth');
-const { requireRole } = require('./middlewares/require-role');
 
 loadDotEnv(path.join(process.cwd(), '.env'));
 
@@ -48,6 +60,7 @@ function parseEnvPositiveInt(raw, fallback) {
 const ENABLE_PLAYGROUND = parseEnvBool(process.env.EXPORT_API_ENABLE_PLAYGROUND, !IS_PRODUCTION);
 const ADMIN_UI_ENABLED = parseEnvBool(process.env.ADMIN_UI_ENABLED, !IS_PRODUCTION);
 const DOCS_ENABLED = parseEnvBool(process.env.DOCS_ENABLED, !IS_PRODUCTION);
+const PUBLIC_DOCS_ENABLED = parseEnvBool(process.env.PUBLIC_DOCS_ENABLED, false);
 const RATE_LIMIT_ENABLED = parseEnvBool(process.env.EXPORT_API_RATE_LIMIT_ENABLED, true);
 const RATE_LIMIT_WINDOW_SEC = parseEnvPositiveInt(process.env.EXPORT_API_RATE_LIMIT_WINDOW_SEC, 60);
 const RATE_LIMIT_MAX_REQUESTS = parseEnvPositiveInt(
@@ -163,10 +176,39 @@ const adminDir = path.join(process.cwd(), 'admin', 'web');
 const playgroundDir = path.join(process.cwd(), 'playground', 'web');
 const docsDir = path.join(process.cwd(), 'docs');
 const swaggerUiPath = path.join(docsDir, 'swagger', 'index.html');
+const publicSwaggerUiPath = path.join(docsDir, 'swagger', 'public.html');
 const openApiSpecPath = path.join(docsDir, 'openapi.json');
+const publicOpenApiSpecPath = path.join(docsDir, 'openapi.public.json');
 const requireDocsAvailability = docsAvailabilityMiddleware(DOCS_ENABLED);
+const requirePublicDocsAvailability = docsAvailabilityMiddleware(PUBLIC_DOCS_ENABLED);
 const requirePartnerAccess = requireLegacyOrApiKeyAuth(authMiddleware);
-const requireApiKeyAdmin = [requireConfiguredAuth, requireAuth, requireRole('admin', 'developer')];
+
+function setAdminSessionCookie(res, token) {
+  res.setHeader(
+    'Set-Cookie',
+    serializeCookie(adminCookieName, token, {
+      httpOnly: true,
+      sameSite: 'Lax',
+      secure: IS_PRODUCTION,
+      path: '/',
+      maxAge: 60 * 60 * 8,
+    })
+  );
+}
+
+function clearAdminSessionCookie(res) {
+  res.setHeader(
+    'Set-Cookie',
+    serializeCookie(adminCookieName, '', {
+      httpOnly: true,
+      sameSite: 'Lax',
+      secure: IS_PRODUCTION,
+      path: '/',
+      maxAge: 0,
+      expires: new Date(0),
+    })
+  );
+}
 
 app.use(express.json());
 
@@ -182,11 +224,53 @@ if (ADMIN_UI_ENABLED) {
   app.get('/admin', (_req, res) => {
     return res.redirect('/admin/dashboard');
   });
-  app.get('/admin/dashboard', (_req, res) => {
+  app.get('/admin/dashboard', requireConfiguredAuth, requireAdminPageSession, (_req, res) => {
     res.sendFile(path.join(adminDir, 'index.html'));
   });
   app.get('/admin/login', (_req, res) => {
     res.sendFile(path.join(adminDir, 'login.html'));
+  });
+  app.get('/admin/session', requireConfiguredAuth, requireAdminOperator, (req, res) => {
+    return res.json({ user: req.adminAuth.user });
+  });
+  app.post('/admin/login', requireConfiguredAuth, async (req, res) => {
+    const email = String(req.body?.email || '').trim();
+    const password = String(req.body?.password || '');
+
+    if (!email || !password) {
+      return res.status(400).json({
+        error: 'BadRequest',
+        message: 'email and password are required.',
+      });
+    }
+
+    try {
+      const session = await loginWithPassword(email, password, { issueRefreshToken: false });
+      if (!session) {
+        return res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Invalid email or password.',
+        });
+      }
+      if (!userHasAdminConsoleAccess(session.user)) {
+        return res.status(403).json({
+          error: 'Forbidden',
+          message: 'Only admin or developer users can access the admin console.',
+        });
+      }
+
+      setAdminSessionCookie(res, session.accessToken);
+      return res.json({ user: session.user });
+    } catch (err) {
+      return res.status(500).json({
+        error: 'AdminLoginFailed',
+        message: err.message || 'Unknown error',
+      });
+    }
+  });
+  app.post('/admin/logout', (_req, res) => {
+    clearAdminSessionCookie(res);
+    return res.status(204).end();
   });
 }
 
@@ -195,8 +279,17 @@ app.get('/openapi.json', requireDocsAvailability, requireConfiguredAuth, require
   return res.sendFile(openApiSpecPath);
 });
 
+app.get('/openapi.public.json', requirePublicDocsAvailability, (_req, res) => {
+  res.type('application/json');
+  return res.sendFile(publicOpenApiSpecPath);
+});
+
 app.get('/docs', requireDocsAvailability, requireConfiguredAuth, requireDocsAccess, (_req, res) => {
   return res.sendFile(swaggerUiPath);
+});
+
+app.get('/docs/public', requirePublicDocsAvailability, (_req, res) => {
+  return res.sendFile(publicSwaggerUiPath);
 });
 
 app.get('/health', (_req, res) => {
@@ -232,11 +325,69 @@ app.post('/auth/login', requireConfiguredAuth, async (req, res) => {
       accessToken: session.accessToken,
       tokenType: 'Bearer',
       expiresIn: session.accessTokenTtl,
+      refreshToken: session.refreshToken,
+      refreshTokenExpiresAt: session.refreshTokenExpiresAt,
+      refreshTokenTtlDays: session.refreshTokenTtlDays,
       user: session.user,
     });
   } catch (err) {
     return res.status(500).json({
       error: 'AuthLoginFailed',
+      message: err.message || 'Unknown error',
+    });
+  }
+});
+
+app.post('/auth/refresh', requireConfiguredAuth, async (req, res) => {
+  const refreshToken = String(req.body?.refreshToken || '').trim();
+  if (!refreshToken) {
+    return res.status(400).json({
+      error: 'BadRequest',
+      message: 'refreshToken is required.',
+    });
+  }
+
+  try {
+    const session = await refreshUserSession(refreshToken);
+    if (!session) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Invalid, expired or revoked refresh token.',
+      });
+    }
+
+    return res.json({
+      accessToken: session.accessToken,
+      tokenType: 'Bearer',
+      expiresIn: session.accessTokenTtl,
+      refreshToken: session.refreshToken,
+      refreshTokenExpiresAt: session.refreshTokenExpiresAt,
+      refreshTokenTtlDays: session.refreshTokenTtlDays,
+      user: session.user,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'AuthRefreshFailed',
+      message: err.message || 'Unknown error',
+    });
+  }
+});
+
+app.post('/auth/logout', requireConfiguredAuth, async (req, res) => {
+  const refreshToken = String(req.body?.refreshToken || '').trim();
+  if (!refreshToken) {
+    return res.status(400).json({
+      error: 'BadRequest',
+      message: 'refreshToken is required.',
+    });
+  }
+
+  try {
+    await revokeRefreshToken(refreshToken);
+    return res.status(204).end();
+  } catch (err) {
+    return res.status(500).json({
+      error: 'AuthLogoutFailed',
       message: err.message || 'Unknown error',
     });
   }
@@ -261,7 +412,7 @@ app.get('/auth/me', requireConfiguredAuth, requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api-keys', ...requireApiKeyAdmin, async (req, res) => {
+app.get('/api-keys', requireConfiguredAuth, requireAdminOperator, async (req, res) => {
   if (!isApiKeyServiceConfigured()) {
     return res.status(503).json({
       error: 'ApiKeyServiceNotConfigured',
@@ -280,7 +431,7 @@ app.get('/api-keys', ...requireApiKeyAdmin, async (req, res) => {
   }
 });
 
-app.get('/api-keys/stats', ...requireApiKeyAdmin, async (_req, res) => {
+app.get('/api-keys/stats', requireConfiguredAuth, requireAdminOperator, async (_req, res) => {
   if (!isApiKeyServiceConfigured()) {
     return res.status(503).json({
       error: 'ApiKeyServiceNotConfigured',
@@ -299,7 +450,7 @@ app.get('/api-keys/stats', ...requireApiKeyAdmin, async (_req, res) => {
   }
 });
 
-app.get('/audit-logs', ...requireApiKeyAdmin, async (req, res) => {
+app.get('/audit-logs', requireConfiguredAuth, requireAdminOperator, async (req, res) => {
   if (!isApiKeyServiceConfigured()) {
     return res.status(503).json({
       error: 'AuditServiceNotConfigured',
@@ -326,7 +477,7 @@ app.get('/audit-logs', ...requireApiKeyAdmin, async (req, res) => {
   }
 });
 
-app.get('/api-keys/:id', ...requireApiKeyAdmin, async (req, res) => {
+app.get('/api-keys/:id', requireConfiguredAuth, requireAdminOperator, async (req, res) => {
   if (!isApiKeyServiceConfigured()) {
     return res.status(503).json({
       error: 'ApiKeyServiceNotConfigured',
@@ -351,7 +502,7 @@ app.get('/api-keys/:id', ...requireApiKeyAdmin, async (req, res) => {
   }
 });
 
-app.post('/api-keys', ...requireApiKeyAdmin, async (req, res) => {
+app.post('/api-keys', requireConfiguredAuth, requireAdminOperator, async (req, res) => {
   if (!isApiKeyServiceConfigured()) {
     return res.status(503).json({
       error: 'ApiKeyServiceNotConfigured',
@@ -404,7 +555,7 @@ app.post('/api-keys', ...requireApiKeyAdmin, async (req, res) => {
   }
 });
 
-app.post('/api-keys/:id/revoke', ...requireApiKeyAdmin, async (req, res) => {
+app.post('/api-keys/:id/revoke', requireConfiguredAuth, requireAdminOperator, async (req, res) => {
   if (!isApiKeyServiceConfigured()) {
     return res.status(503).json({
       error: 'ApiKeyServiceNotConfigured',
@@ -444,7 +595,7 @@ app.post('/api-keys/:id/revoke', ...requireApiKeyAdmin, async (req, res) => {
   }
 });
 
-app.post('/api-keys/:id/reactivate', ...requireApiKeyAdmin, async (req, res) => {
+app.post('/api-keys/:id/reactivate', requireConfiguredAuth, requireAdminOperator, async (req, res) => {
   if (!isApiKeyServiceConfigured()) {
     return res.status(503).json({
       error: 'ApiKeyServiceNotConfigured',
@@ -484,7 +635,7 @@ app.post('/api-keys/:id/reactivate', ...requireApiKeyAdmin, async (req, res) => 
   }
 });
 
-app.post('/api-keys/:id/rotate', ...requireApiKeyAdmin, async (req, res) => {
+app.post('/api-keys/:id/rotate', requireConfiguredAuth, requireAdminOperator, async (req, res) => {
   if (!isApiKeyServiceConfigured()) {
     return res.status(503).json({
       error: 'ApiKeyServiceNotConfigured',
@@ -524,7 +675,7 @@ app.post('/api-keys/:id/rotate', ...requireApiKeyAdmin, async (req, res) => {
   }
 });
 
-app.patch('/api-keys/:id', ...requireApiKeyAdmin, async (req, res) => {
+app.patch('/api-keys/:id', requireConfiguredAuth, requireAdminOperator, async (req, res) => {
   if (!isApiKeyServiceConfigured()) {
     return res.status(503).json({
       error: 'ApiKeyServiceNotConfigured',
@@ -618,6 +769,7 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   );
   console.log(`Admin UI ${ADMIN_UI_ENABLED ? 'enabled' : 'disabled'}`);
   console.log(`Docs ${DOCS_ENABLED ? 'enabled' : 'disabled'}${DOCS_ENABLED ? ' (JWT + roles protected)' : ''}`);
+  console.log(`Public docs ${PUBLIC_DOCS_ENABLED ? 'enabled' : 'disabled'}`);
   console.log(`App auth ${AUTH_ENABLED ? 'enabled' : 'disabled'}${AUTH_ENABLED ? ' (database + JWT)' : ''}`);
   console.log(
     `Rate limiting ${
