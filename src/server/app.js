@@ -28,6 +28,7 @@ const { serializeCookie } = require('../../lib/cookies');
 const { loadDotEnv } = require('../../lib/load-dotenv');
 const { fetchApartmentsLive } = require('../../lib/apartment-export');
 const { requireDocsAccess } = require('./middlewares/docs-access');
+const { createInMemoryRateLimit } = require('./middlewares/request-rate-limit');
 const {
   adminCookieName,
   requireAdminOperator,
@@ -64,7 +65,15 @@ const RATE_LIMIT_MAX_REQUESTS = parseEnvPositiveInt(
   process.env.EXPORT_API_RATE_LIMIT_MAX_REQUESTS,
   60
 );
-const rateLimitState = new Map();
+const LOGIN_RATE_LIMIT_ENABLED = parseEnvBool(process.env.AUTH_LOGIN_RATE_LIMIT_ENABLED, true);
+const LOGIN_RATE_LIMIT_WINDOW_SEC = parseEnvPositiveInt(
+  process.env.AUTH_LOGIN_RATE_LIMIT_WINDOW_SEC,
+  300
+);
+const LOGIN_RATE_LIMIT_MAX_REQUESTS = parseEnvPositiveInt(
+  process.env.AUTH_LOGIN_RATE_LIMIT_MAX_REQUESTS,
+  10
+);
 const AUTH_ENABLED = isAuthConfigured();
 const projectRoot = path.join(__dirname, '..', '..');
 
@@ -80,40 +89,30 @@ function buildRateLimitKey(req) {
   return `ip:${req.ip || 'unknown'}`;
 }
 
-function rateLimitMiddleware(req, res, next) {
-  if (!RATE_LIMIT_ENABLED) return next();
-
-  const nowMs = Date.now();
-  const windowMs = RATE_LIMIT_WINDOW_SEC * 1000;
-  const windowStart = Math.floor(nowMs / windowMs) * windowMs;
-  const key = buildRateLimitKey(req);
-  const current = rateLimitState.get(key);
-
-  const entry =
-    current && current.windowStart === windowStart
-      ? current
-      : { windowStart, count: 0 };
-
-  entry.count += 1;
-  rateLimitState.set(key, entry);
-
-  const remaining = Math.max(0, RATE_LIMIT_MAX_REQUESTS - entry.count);
-  const resetSec = Math.ceil((windowStart + windowMs - nowMs) / 1000);
-
-  res.setHeader('x-ratelimit-limit', String(RATE_LIMIT_MAX_REQUESTS));
-  res.setHeader('x-ratelimit-remaining', String(remaining));
-  res.setHeader('x-ratelimit-reset', String(resetSec));
-
-  if (entry.count > RATE_LIMIT_MAX_REQUESTS) {
-    res.setHeader('retry-after', String(resetSec));
-    return res.status(429).json({
-      error: 'TooManyRequests',
-      message: `Rate limit exceeded. Max ${RATE_LIMIT_MAX_REQUESTS} requests per ${RATE_LIMIT_WINDOW_SEC}s.`,
-    });
-  }
-
-  return next();
+function buildLoginRateLimitKey(req) {
+  const ip = String(req.ip || 'unknown');
+  const email = String(req.body?.email || '')
+    .trim()
+    .toLowerCase();
+  return email ? `login:${ip}:${email}` : `login:${ip}`;
 }
+
+const rateLimitMiddleware = createInMemoryRateLimit({
+  enabled: RATE_LIMIT_ENABLED,
+  windowSec: RATE_LIMIT_WINDOW_SEC,
+  maxRequests: RATE_LIMIT_MAX_REQUESTS,
+  keyBuilder: buildRateLimitKey,
+});
+
+const loginRateLimitMiddleware = createInMemoryRateLimit({
+  enabled: LOGIN_RATE_LIMIT_ENABLED,
+  windowSec: LOGIN_RATE_LIMIT_WINDOW_SEC,
+  maxRequests: LOGIN_RATE_LIMIT_MAX_REQUESTS,
+  keyBuilder: buildLoginRateLimitKey,
+  errorCode: 'TooManyLoginAttempts',
+  messageBuilder: ({ maxRequests, windowSec }) =>
+    `Too many login attempts. Max ${maxRequests} requests per ${windowSec}s.`,
+});
 
 const app = express();
 const adminDir = path.join(projectRoot, 'src', 'public', 'admin', 'web');
@@ -195,7 +194,16 @@ app.get('/', (_req, res) => {
   return res.sendFile(path.join(siteDir, 'index.html'));
 });
 
-app.use('/admin', express.static(adminDir, { index: false }));
+const adminStatic = express.static(adminDir, { index: false });
+app.use('/admin', (req, res, next) => {
+  if (/\.html$/i.test(req.path)) {
+    return res.status(404).json({
+      error: 'NotFound',
+      message: 'Not found.',
+    });
+  }
+  return adminStatic(req, res, next);
+});
 app.get('/admin', (_req, res) => {
   return res.redirect('/admin/dashboard');
 });
@@ -208,7 +216,7 @@ app.get('/admin/login', (_req, res) => {
 app.get('/admin/session', requireConfiguredAuth, requireAdminOperator, (req, res) => {
   return res.json({ user: req.adminAuth.user });
 });
-app.post('/admin/login', requireConfiguredAuth, async (req, res) => {
+app.post('/admin/login', loginRateLimitMiddleware, requireConfiguredAuth, async (req, res) => {
   const email = String(req.body?.email || '').trim();
   const password = String(req.body?.password || '');
 
@@ -280,7 +288,7 @@ app.get('/health', (req, res) => {
   return res.json(buildHealthPayload());
 });
 
-app.post('/auth/login', requireConfiguredAuth, async (req, res) => {
+app.post('/auth/login', loginRateLimitMiddleware, requireConfiguredAuth, async (req, res) => {
   const email = String(req.body?.email || '').trim();
   const password = String(req.body?.password || '');
 
@@ -754,6 +762,13 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log('Docs enabled (JWT/session protected)');
   console.log('Public docs enabled');
   console.log(`App auth ${AUTH_ENABLED ? 'enabled' : 'disabled'}${AUTH_ENABLED ? ' (database + JWT)' : ''}`);
+  console.log(
+    `Login rate limiting ${
+      LOGIN_RATE_LIMIT_ENABLED
+        ? `enabled (${LOGIN_RATE_LIMIT_MAX_REQUESTS}/${LOGIN_RATE_LIMIT_WINDOW_SEC}s)`
+        : 'disabled'
+    }`
+  );
   console.log(
     `Rate limiting ${
       RATE_LIMIT_ENABLED ? `enabled (${RATE_LIMIT_MAX_REQUESTS}/${RATE_LIMIT_WINDOW_SEC}s)` : 'disabled'

@@ -4,7 +4,7 @@ const { authenticateAdminOperator } = require('./require-admin-operator');
 const { requireAuth } = require('./require-auth');
 const { requireRole } = require('./require-role');
 
-const DOCS_ALLOWED_ROLES = ['admin', 'developer', 'client'];
+const DOCS_ALLOWED_ROLES = ['admin', 'developer'];
 
 async function requireDocsAccess(req, res, next) {
   const requireDocsRole = requireRole(...DOCS_ALLOWED_ROLES);
