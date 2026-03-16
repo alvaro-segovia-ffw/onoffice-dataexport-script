@@ -91,23 +91,25 @@ function renderStats(stats) {
 }
 
 function statusBadge(apiKey) {
-  if (!apiKey.isActive) return '<span class="badge off">revoked</span>';
+  if (!apiKey.isActive) return '<span class="badge badge-status text-bg-danger">revoked</span>';
   if (apiKey.expiresAt && new Date(apiKey.expiresAt).getTime() <= Date.now()) {
-    return '<span class="badge warn">expired</span>';
+    return '<span class="badge badge-status text-bg-warning">expired</span>';
   }
-  return '<span class="badge on">active</span>';
+  return '<span class="badge badge-status text-bg-success">active</span>';
 }
 
 function keyActionButtons(apiKey) {
   const buttons = [];
-  buttons.push(`<button data-action="rotate" data-id="${apiKey.publicId}" type="button">Rotate</button>`);
+  buttons.push(
+    `<button data-action="rotate" data-id="${apiKey.publicId}" type="button" class="btn btn-sm btn-outline-secondary">Rotate</button>`
+  );
   if (apiKey.isActive) {
     buttons.push(
-      `<button data-action="revoke" data-id="${apiKey.publicId}" type="button" class="danger">Revoke</button>`
+      `<button data-action="revoke" data-id="${apiKey.publicId}" type="button" class="btn btn-sm btn-outline-danger danger">Revoke</button>`
     );
   } else {
     buttons.push(
-      `<button data-action="reactivate" data-id="${apiKey.publicId}" type="button" class="ghost">Reactivate</button>`
+      `<button data-action="reactivate" data-id="${apiKey.publicId}" type="button" class="btn btn-sm btn-outline-success ghost">Reactivate</button>`
     );
   }
   return buttons.join('');

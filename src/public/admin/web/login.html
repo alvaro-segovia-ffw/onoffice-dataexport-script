@@ -11,65 +11,124 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="/admin/styles.css" />
   </head>
-  <body>
-    <div class="shell shell-auth">
-      <header class="topbar">
-        <a class="brand" href="/">
-          <span class="brand-mark-wrap">
-            <img class="brand-mark" src="/site/imgs/hope-logo.png" alt="Hope Apartments logo" />
-          </span>
-          <span class="brand-copy">
-            <strong>Hope Apartments</strong>
-            <span>API Platform</span>
-          </span>
-        </a>
-        <nav class="nav">
-          <a href="/">Home</a>
-          <a href="/docs/public">Public Docs</a>
-          <a href="/health">Health</a>
-          <span class="nav-session" data-nav-session>
-            <span class="nav-user" data-nav-user hidden></span>
-            <a class="nav-link" data-nav-dashboard href="/admin/dashboard" hidden>Dashboard</a>
-            <button class="nav-link nav-logout" data-nav-logout type="button" hidden>Logout</button>
-            <a class="nav-cta" data-nav-login href="/admin/login">Login</a>
-          </span>
-        </nav>
-      </header>
-
-      <main class="auth-shell">
-        <section class="auth-card">
-        <p class="eyebrow">Internal Console</p>
-        <h1>Admin Login</h1>
-        <p class="lede">
-          Sign in with an <code>admin</code> or <code>developer</code> user to access the Hope
-          Apartments operational dashboard.
-        </p>
-
-        <form id="loginForm" class="stack">
-          <label>
-            Email
-            <input id="loginEmail" name="email" type="email" placeholder="admin@example.com" required />
-          </label>
-          <label>
-            Password
-            <input id="loginPassword" name="password" type="password" placeholder="Password" required />
-          </label>
-          <div class="actions">
-            <button id="btnLogin" type="submit">Sign In</button>
-            <button id="btnClear" type="button" class="ghost">Clear</button>
+  <body class="admin-body">
+    <header class="admin-header py-3 py-lg-4">
+      <div class="container-xxl">
+        <nav class="navbar navbar-expand-lg admin-navbar rounded-4 px-3 px-lg-4 py-3" data-bs-theme="dark">
+          <a class="navbar-brand brand-lockup me-0" href="/">
+            <span class="brand-logo-shell">
+              <img class="brand-logo" src="/site/imgs/hope-logo.png" alt="Hope Apartments logo" />
+            </span>
+            <span class="brand-text">
+              <strong>Hope Apartments</strong>
+              <span>Admin Console</span>
+            </span>
+          </a>
+          <button
+            class="navbar-toggler border-0 shadow-none"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#adminLoginNavbar"
+            aria-controls="adminLoginNavbar"
+            aria-expanded="false"
+            aria-label="Toggle navigation"
+          >
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="adminLoginNavbar">
+            <div class="navbar-nav gap-lg-2 ms-auto me-lg-4">
+              <a class="nav-link" href="/">Overview</a>
+              <a class="nav-link" href="/docs/public">Partner Docs</a>
+              <a class="nav-link" href="/health">Health</a>
+            </div>
+            <div class="nav-session d-flex flex-column flex-lg-row gap-2 align-items-lg-center" data-nav-session>
+              <span class="nav-user badge rounded-pill text-bg-light" data-nav-user hidden></span>
+              <a class="btn btn-outline-light nav-action" data-nav-dashboard href="/admin/dashboard" hidden>
+                Dashboard
+              </a>
+              <button class="btn btn-outline-light nav-action" data-nav-logout type="button" hidden>
+                Logout
+              </button>
+              <a class="btn btn-admin nav-action" data-nav-login href="/admin/login">Admin Login</a>
+            </div>
           </div>
-        </form>
+        </nav>
+      </div>
+    </header>
 
-        <div class="session-bar auth-status-bar">
-          <span id="loginStatus" class="status">idle</span>
-          <span id="sessionSummary" class="session-summary">No active session.</span>
+    <main class="pb-5">
+      <section class="container-xl">
+        <div class="row g-4 align-items-stretch">
+          <div class="col-lg-6">
+            <article class="surface-card auth-aside h-100">
+              <p class="eyebrow">Restricted area</p>
+              <h1 class="display-4 hero-title mb-3">Sign in to the internal operations console.</h1>
+              <p class="lede mb-4">
+                Use an <code>admin</code> or <code>developer</code> account to manage API keys,
+                inspect partner audit logs and access internal documentation.
+              </p>
+              <div class="vstack gap-3">
+                <div class="access-row">
+                  <span>Credential scope</span>
+                  <strong>Only internal operational users</strong>
+                </div>
+                <div class="access-row">
+                  <span>Capabilities</span>
+                  <strong>Key lifecycle, stats, audits and internal Swagger</strong>
+                </div>
+                <div class="access-row">
+                  <span>Session behavior</span>
+                  <strong>Successful login redirects directly to the admin dashboard</strong>
+                </div>
+              </div>
+            </article>
+          </div>
+          <div class="col-lg-6">
+            <section class="surface-card auth-card h-100">
+              <div class="panel-head">
+                <div>
+                  <p class="card-kicker">Authentication</p>
+                  <h2 class="mb-0">Admin Login</h2>
+                </div>
+                <span id="loginStatus" class="status badge rounded-pill">idle</span>
+              </div>
+              <p class="section-copy mt-3 mb-4">
+                Sign in to unlock the protected dashboard. Existing sessions are detected automatically.
+              </p>
+              <form id="loginForm" class="row g-3">
+                <div class="col-12">
+                  <label class="form-label">
+                    Email
+                    <input id="loginEmail" name="email" type="email" class="form-control" placeholder="admin@example.com" required />
+                  </label>
+                </div>
+                <div class="col-12">
+                  <label class="form-label">
+                    Password
+                    <input id="loginPassword" name="password" type="password" class="form-control" placeholder="Password" required />
+                  </label>
+                </div>
+                <div class="col-12 d-flex flex-wrap gap-3 pt-2">
+                  <button id="btnLogin" type="submit" class="btn btn-admin">Sign In</button>
+                  <button id="btnClear" type="button" class="btn btn-outline-admin ghost">Clear</button>
+                </div>
+              </form>
+              <div class="session-strip mt-4">
+                <span id="sessionSummary" class="session-summary">No active session.</span>
+              </div>
+            </section>
+          </div>
         </div>
-        </section>
-      </main>
-    </div>
+      </section>
+    </main>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/site/nav-session.js"></script>
     <script src="/admin/login.js"></script>
   </body>
