@@ -1,6 +1,7 @@
 'use strict';
 
 const express = require('express');
+const fs = require('fs');
 const path = require('path');
 const {
   loginWithPassword,
@@ -11,6 +12,7 @@ const {
 } = require('../../lib/auth-service');
 const {
   createApiKey,
+  findApiKeyByIdentifier,
   findApiKeyById,
   getApiKeyStats,
   isApiKeyServiceConfigured,
@@ -66,6 +68,12 @@ const rateLimitState = new Map();
 const AUTH_ENABLED = isAuthConfigured();
 const projectRoot = path.join(__dirname, '..', '..');
 
+function toApiKeyResponse(apiKey) {
+  if (!apiKey) return null;
+  const { id: _internalId, ...publicApiKey } = apiKey;
+  return publicApiKey;
+}
+
 function buildRateLimitKey(req) {
   const apiKey = String(req.header('x-api-key') || '').trim();
   if (apiKey) return `api_key:${apiKey}`;
@@ -116,6 +124,8 @@ const publicSwaggerUiPath = path.join(docsDir, 'swagger', 'public.html');
 const openApiSpecPath = path.join(docsDir, 'openapi.json');
 const publicOpenApiSpecPath = path.join(docsDir, 'openapi.public.json');
 const healthPagePath = path.join(siteDir, 'health.html');
+const openApiSpec = JSON.parse(fs.readFileSync(openApiSpecPath, 'utf8'));
+const publicOpenApiSpec = JSON.parse(fs.readFileSync(publicOpenApiSpecPath, 'utf8'));
 
 function buildHealthPayload() {
   return {
@@ -123,6 +133,31 @@ function buildHealthPayload() {
     uptimeSec: Math.floor(process.uptime()),
     now: new Date().toISOString(),
     authEnabled: AUTH_ENABLED,
+  };
+}
+
+function requestOrigin(req) {
+  const forwardedProto = String(req.header('x-forwarded-proto') || '')
+    .split(',')[0]
+    .trim();
+  const proto = forwardedProto || req.protocol || (IS_PRODUCTION ? 'https' : 'http');
+  const host = String(req.header('x-forwarded-host') || req.header('host') || '').trim();
+  if (!host) return null;
+  return `${proto}://${host}`;
+}
+
+function buildOpenApiPayload(spec, req, explicitUrl) {
+  const serverUrl = String(explicitUrl || '').trim() || requestOrigin(req);
+  if (!serverUrl) return spec;
+
+  return {
+    ...spec,
+    servers: [
+      {
+        url: serverUrl,
+        description: 'Current environment',
+      },
+    ],
   };
 }
 
@@ -213,14 +248,16 @@ app.post('/admin/logout', (_req, res) => {
   return res.status(204).end();
 });
 
-app.get('/openapi.json', requireConfiguredAuth, requireDocsAccess, (_req, res) => {
+app.get('/openapi.json', requireConfiguredAuth, requireDocsAccess, (req, res) => {
   res.type('application/json');
-  return res.sendFile(openApiSpecPath);
+  return res.send(buildOpenApiPayload(openApiSpec, req, process.env.OPENAPI_SERVER_URL));
 });
 
-app.get('/openapi.public.json', (_req, res) => {
+app.get('/openapi.public.json', (req, res) => {
   res.type('application/json');
-  return res.sendFile(publicOpenApiSpecPath);
+  return res.send(
+    buildOpenApiPayload(publicOpenApiSpec, req, process.env.OPENAPI_PUBLIC_SERVER_URL)
+  );
 });
 
 app.get('/docs', requireConfiguredAuth, requireDocsAccess, (_req, res) => {
@@ -364,7 +401,7 @@ app.get('/api-keys', requireConfiguredAuth, requireAdminOperator, async (req, re
 
   try {
     const apiKeys = await listApiKeys();
-    return res.json({ apiKeys });
+    return res.json({ apiKeys: apiKeys.map(toApiKeyResponse) });
   } catch (err) {
     return res.status(500).json({
       error: 'ApiKeysListFailed',
@@ -428,14 +465,14 @@ app.get('/api-keys/:id', requireConfiguredAuth, requireAdminOperator, async (req
   }
 
   try {
-    const apiKey = await findApiKeyById(req.params.id);
+    const apiKey = await findApiKeyByIdentifier(req.params.id);
     if (!apiKey) {
       return res.status(404).json({
         error: 'NotFound',
         message: 'API key not found.',
       });
     }
-    return res.json({ apiKey });
+    return res.json({ apiKey: toApiKeyResponse(apiKey) });
   } catch (err) {
     return res.status(500).json({
       error: 'ApiKeyReadFailed',
@@ -488,7 +525,10 @@ app.post('/api-keys', requireConfiguredAuth, requireAdminOperator, async (req, r
       },
     });
 
-    return res.status(201).json(created);
+    return res.status(201).json({
+      apiKey: toApiKeyResponse(created.apiKey),
+      secret: created.secret,
+    });
   } catch (err) {
     return res.status(500).json({
       error: 'ApiKeyCreateFailed',
@@ -506,7 +546,7 @@ app.post('/api-keys/:id/revoke', requireConfiguredAuth, requireAdminOperator, as
   }
 
   try {
-    const existing = await findApiKeyById(req.params.id);
+    const existing = await findApiKeyByIdentifier(req.params.id);
     if (!existing) {
       return res.status(404).json({
         error: 'NotFound',
@@ -528,7 +568,7 @@ app.post('/api-keys/:id/revoke', requireConfiguredAuth, requireAdminOperator, as
       },
     });
 
-    return res.json({ apiKey: revoked });
+    return res.json({ apiKey: toApiKeyResponse(revoked) });
   } catch (err) {
     return res.status(500).json({
       error: 'ApiKeyRevokeFailed',
@@ -546,7 +586,7 @@ app.post('/api-keys/:id/reactivate', requireConfiguredAuth, requireAdminOperator
   }
 
   try {
-    const existing = await findApiKeyById(req.params.id);
+    const existing = await findApiKeyByIdentifier(req.params.id);
     if (!existing) {
       return res.status(404).json({
         error: 'NotFound',
@@ -568,7 +608,7 @@ app.post('/api-keys/:id/reactivate', requireConfiguredAuth, requireAdminOperator
       },
     });
 
-    return res.json({ apiKey });
+    return res.json({ apiKey: toApiKeyResponse(apiKey) });
   } catch (err) {
     return res.status(500).json({
       error: 'ApiKeyReactivateFailed',
@@ -608,7 +648,11 @@ app.post('/api-keys/:id/rotate', requireConfiguredAuth, requireAdminOperator, as
       },
     });
 
-    return res.json(rotated);
+    return res.json({
+      previousApiKeyId: rotated.previousApiKeyId,
+      apiKey: toApiKeyResponse(rotated.apiKey),
+      secret: rotated.secret,
+    });
   } catch (err) {
     return res.status(500).json({
       error: 'ApiKeyRotateFailed',
@@ -626,7 +670,7 @@ app.patch('/api-keys/:id', requireConfiguredAuth, requireAdminOperator, async (r
   }
 
   try {
-    const existing = await findApiKeyById(req.params.id);
+    const existing = await findApiKeyByIdentifier(req.params.id);
     if (!existing) {
       return res.status(404).json({
         error: 'NotFound',
@@ -656,7 +700,7 @@ app.patch('/api-keys/:id', requireConfiguredAuth, requireAdminOperator, async (r
       },
     });
 
-    return res.json({ apiKey });
+    return res.json({ apiKey: toApiKeyResponse(apiKey) });
   } catch (err) {
     return res.status(500).json({
       error: 'ApiKeyUpdateFailed',

@@ -284,14 +284,15 @@
     "/api-keys/{id}": {
       "get": {
         "tags": ["API Keys"],
-        "summary": "Read API key by id",
+        "summary": "Read API key by public identifier",
         "security": [{ "bearerAuth": [] }],
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": { "type": "string" }
+            "schema": { "type": "string" },
+            "description": "API key public identifier (key prefix)"
           }
         ],
         "responses": {
@@ -308,7 +309,8 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": { "type": "string" }
+            "schema": { "type": "string" },
+            "description": "API key public identifier (key prefix)"
           }
         ],
         "responses": {
@@ -327,7 +329,8 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": { "type": "string" }
+            "schema": { "type": "string" },
+            "description": "API key public identifier (key prefix)"
           }
         ],
         "responses": {
@@ -346,7 +349,8 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": { "type": "string" }
+            "schema": { "type": "string" },
+            "description": "API key public identifier (key prefix)"
           }
         ],
         "responses": {
@@ -365,7 +369,8 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": { "type": "string" }
+            "schema": { "type": "string" },
+            "description": "API key public identifier (key prefix)"
           }
         ],
         "responses": {

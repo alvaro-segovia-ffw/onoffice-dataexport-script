@@ -100,11 +100,15 @@ function statusBadge(apiKey) {
 
 function keyActionButtons(apiKey) {
   const buttons = [];
-  buttons.push(`<button data-action="rotate" data-id="${apiKey.id}" type="button">Rotate</button>`);
+  buttons.push(`<button data-action="rotate" data-id="${apiKey.publicId}" type="button">Rotate</button>`);
   if (apiKey.isActive) {
-    buttons.push(`<button data-action="revoke" data-id="${apiKey.id}" type="button" class="danger">Revoke</button>`);
+    buttons.push(
+      `<button data-action="revoke" data-id="${apiKey.publicId}" type="button" class="danger">Revoke</button>`
+    );
   } else {
-    buttons.push(`<button data-action="reactivate" data-id="${apiKey.id}" type="button" class="ghost">Reactivate</button>`);
+    buttons.push(
+      `<button data-action="reactivate" data-id="${apiKey.publicId}" type="button" class="ghost">Reactivate</button>`
+    );
   }
   return buttons.join('');
 }
