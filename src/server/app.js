@@ -25,7 +25,7 @@ const {
 const { listAuditLogs, writeAuditLog } = require('../../lib/audit-service');
 const { requireApiKey } = require('./middlewares/require-api-key');
 const { serializeCookie } = require('../../lib/cookies');
-const { loadDotEnv } = require('../../lib/load-dotenv');
+const { loadAppEnv } = require('../../lib/load-dotenv');
 const { fetchApartmentsLive } = require('../../lib/apartment-export');
 const { requireDocsAccess } = require('./middlewares/docs-access');
 const {
@@ -37,7 +37,7 @@ const {
 const { requireConfiguredAuth } = require('./middlewares/require-configured-auth');
 const { requireAuth } = require('./middlewares/require-auth');
 
-loadDotEnv(path.join(process.cwd(), '.env'));
+loadAppEnv(process.cwd());
 
 const PORT = Number(process.env.PORT || process.env.EXPORT_API_PORT || 3000);
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';

@@ -1,10 +1,10 @@
 'use strict';
 
 const path = require('path');
-const { loadDotEnv } = require('../lib/load-dotenv');
+const { loadAppEnv } = require('../lib/load-dotenv');
 const { runApartmentExport } = require('../lib/apartment-export');
 
-loadDotEnv(path.join(process.cwd(), '.env'));
+loadAppEnv(process.cwd());
 
 runApartmentExport()
   .then((result) => {

@@ -12,9 +12,9 @@ const {
   toGeocodeCsv,
   toOnOfficeImportCsv,
 } = require('../lib/apartment-geocoding');
-const { loadDotEnv } = require('../lib/load-dotenv');
+const { loadAppEnv } = require('../lib/load-dotenv');
 
-loadDotEnv(path.join(process.cwd(), '.env'));
+loadAppEnv(process.cwd());
 
 const DEFAULT_PROVIDER = 'nominatim';
 const DEFAULT_COUNTRY_CODE = process.env.GEOCODER_COUNTRY_CODE || 'de';

@@ -1,4 +1,7 @@
 .env
+.env.local
+.env.railway
+.env.docker
 exports/
 node_modules/
 .DS_Store

@@ -92,23 +92,51 @@ Each request performs a live sync from onOffice and returns transformed apartmen
 npm install
 ```
 
-2. Create environment file:
+2. Create local environment file:
 
 ```bash
-cp .env.example .env
+cp .env.example .env.local
 ```
 
-3. Fill your credentials in `.env`.
+3. Start PostgreSQL for local development:
 
-4. Start API:
+```bash
+docker compose up -d
+```
+
+4. Fill your credentials in `.env.local`.
+
+For local Docker PostgreSQL, use:
+
+```env
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/hopeapartments_dev
+DATABASE_SSL=false
+```
+
+5. Run the database schema:
+
+```bash
+psql "postgresql://postgres:postgres@localhost:5432/hopeapartments_dev" -f docs/sql/001_auth_schema.sql
+psql "postgresql://postgres:postgres@localhost:5432/hopeapartments_dev" -f docs/sql/002_api_keys_metadata.sql
+```
+
+6. Start API:
 
 ```bash
 npm run api
 ```
 
+7. Open the local app:
+
+```text
+http://localhost:3000/
+http://localhost:3000/admin/login
+http://localhost:3000/health
+```
+
 ## Environment Variables
 
-See [.env.example](.env.example).
+See [.env.example](.env.example) for local development. For Railway, configure environment variables directly in the Railway dashboard instead of committing a production env file.
 
 Core variables:
 
@@ -124,6 +152,8 @@ Core variables:
 - `JWT_AUDIENCE`: optional JWT audience (default `hope-apartments-clients`)
 - `BCRYPT_ROUNDS`: optional bcrypt cost (default `12`)
 - `EXPORT_API_PORT`: API port (example: `3000`)
+- `OPENAPI_SERVER_URL`: optional explicit base URL for internal Swagger/OpenAPI responses
+- `OPENAPI_PUBLIC_SERVER_URL`: optional explicit base URL for public Swagger/OpenAPI responses
 - `EXPORT_API_RATE_LIMIT_ENABLED`: optional (`true/false`), enables in-memory rate limiting on `GET /apartments`
 - `EXPORT_API_RATE_LIMIT_WINDOW_SEC`: optional positive integer window in seconds (default `60`)
 - `EXPORT_API_RATE_LIMIT_MAX_REQUESTS`: optional positive integer max requests per window (default `60`)
