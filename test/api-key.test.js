@@ -77,6 +77,7 @@ test('mapApiKeyRow normalizes database fields to API contract', () => {
   });
 
   assert.equal(mapped.partnerId, 'partner-a');
+  assert.equal(mapped.publicId, 'hop_live_abc123def456');
   assert.equal(mapped.keyPrefix, 'hop_live_abc123def456');
   assert.equal(mapped.role, 'client');
   assert.deepEqual(mapped.scopes, ['apartments:read']);
