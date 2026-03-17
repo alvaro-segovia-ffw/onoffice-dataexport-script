@@ -1,6 +1,7 @@
 'use strict';
 
 const { writeAuditLog } = require('../../../lib/audit-service');
+const { PublicError } = require('../errors/public-error');
 
 function getApiKeyScopes(req) {
   if (Array.isArray(req.apiKey?.scopes)) return req.apiKey.scopes;
@@ -38,12 +39,15 @@ function buildScopeAuditEntry(req, requiredScope) {
 function requireApiKeyScope(requiredScope, options = {}) {
   const auditLogWriter = options.auditLogWriter || writeAuditLog;
 
-  return async function requireApiKeyScopeMiddleware(req, res, next) {
+  return async function requireApiKeyScopeMiddleware(req, _res, next) {
     if (!req.apiKey && !req.authActor) {
-      return res.status(500).json({
-        error: 'ApiKeyScopeMiddlewareMisconfigured',
-        message: 'API key scope middleware requires requireApiKey to run first.',
-      });
+      return next(
+        new PublicError({
+          statusCode: 500,
+          code: 'API_KEY_SCOPE_MIDDLEWARE_MISCONFIGURED',
+          message: 'Internal server error',
+        })
+      );
     }
 
     if (hasRequiredScope(req, requiredScope)) return next();
@@ -54,10 +58,13 @@ function requireApiKeyScope(requiredScope, options = {}) {
       // Scope enforcement should not fail open or break requests because audit persistence failed.
     }
 
-    return res.status(403).json({
-      error: 'Forbidden',
-      message: `Missing required API key scope: ${requiredScope}.`,
-    });
+    return next(
+      new PublicError({
+        statusCode: 403,
+        code: 'FORBIDDEN',
+        message: `Missing required API key scope: ${requiredScope}.`,
+      })
+    );
   };
 }
 

@@ -3,6 +3,7 @@
 const { parseApiKey } = require('../../../lib/api-key');
 const { writeAuditLog } = require('../../../lib/audit-service');
 const { verifyApiKey, isApiKeyServiceConfigured } = require('../../../lib/api-key-service');
+const { PublicError } = require('../errors/public-error');
 
 function extractApiKey(req) {
   return String(req.header('x-api-key') || '').trim();
@@ -10,18 +11,24 @@ function extractApiKey(req) {
 
 async function requireApiKey(req, res, next) {
   if (!isApiKeyServiceConfigured()) {
-    return res.status(503).json({
-      error: 'ApiKeyAuthNotConfigured',
-      message: 'API key auth requires DATABASE_URL.',
-    });
+    return next(
+      new PublicError({
+        statusCode: 503,
+        code: 'API_KEY_AUTH_NOT_CONFIGURED',
+        message: 'API key auth requires DATABASE_URL.',
+      })
+    );
   }
 
   const rawKey = extractApiKey(req);
   if (!rawKey) {
-    return res.status(401).json({
-      error: 'Unauthorized',
-      message: 'Missing X-API-Key header.',
-    });
+    return next(
+      new PublicError({
+        statusCode: 401,
+        code: 'UNAUTHORIZED',
+        message: 'Missing X-API-Key header.',
+      })
+    );
   }
 
   try {
@@ -38,10 +45,13 @@ async function requireApiKey(req, res, next) {
           keyPrefix: parsed?.keyPrefix || null,
         },
       });
-      return res.status(401).json({
-        error: 'Unauthorized',
-        message: `Invalid API key (${result.reason}).`,
-      });
+      return next(
+        new PublicError({
+          statusCode: 401,
+          code: 'UNAUTHORIZED',
+          message: 'Invalid API key.',
+        })
+      );
     }
 
     req.apiKey = result.apiKey;
@@ -68,10 +78,7 @@ async function requireApiKey(req, res, next) {
 
     return next();
   } catch (err) {
-    return res.status(500).json({
-      error: 'ApiKeyAuthFailed',
-      message: err.message || 'Unknown error',
-    });
+    return next(err);
   }
 }
 

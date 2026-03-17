@@ -3,6 +3,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const { PublicError } = require('./errors/public-error');
 const {
   loginWithPassword,
   getUserProfile,
@@ -29,6 +30,7 @@ const { serializeCookie } = require('../../lib/cookies');
 const { loadAppEnv } = require('../../lib/load-dotenv');
 const { fetchApartmentsLive } = require('../../lib/apartment-export');
 const { requireDocsAccess } = require('./middlewares/docs-access');
+const { errorHandler } = require('./middlewares/error-handler');
 const { createInMemoryRateLimit } = require('./middlewares/request-rate-limit');
 const {
   adminCookieName,
@@ -46,6 +48,12 @@ const PORT = Number(process.env.PORT || process.env.EXPORT_API_PORT || 3000);
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 let isLiveRequestRunning = false;
+
+function asyncHandler(handler) {
+  return function wrappedAsyncHandler(req, res, next) {
+    return Promise.resolve(handler(req, res, next)).catch(next);
+  };
+}
 
 function parseEnvBool(raw, fallback) {
   if (raw === undefined) return fallback;
@@ -199,10 +207,13 @@ app.get('/', (_req, res) => {
 const adminStatic = express.static(adminDir, { index: false });
 app.use('/admin', (req, res, next) => {
   if (/\.html$/i.test(req.path)) {
-    return res.status(404).json({
-      error: 'NotFound',
-      message: 'Not found.',
-    });
+    return next(
+      new PublicError({
+        statusCode: 404,
+        code: 'NOT_FOUND',
+        message: 'Not found.',
+      })
+    );
   }
   return adminStatic(req, res, next);
 });
@@ -218,41 +229,42 @@ app.get('/admin/login', (_req, res) => {
 app.get('/admin/session', requireConfiguredAuth, requireAdminOperator, (req, res) => {
   return res.json({ user: req.adminAuth.user });
 });
-app.post('/admin/login', loginRateLimitMiddleware, requireConfiguredAuth, async (req, res) => {
-  const email = String(req.body?.email || '').trim();
-  const password = String(req.body?.password || '');
+app.post(
+  '/admin/login',
+  loginRateLimitMiddleware,
+  requireConfiguredAuth,
+  asyncHandler(async (req, res) => {
+    const email = String(req.body?.email || '').trim();
+    const password = String(req.body?.password || '');
 
-  if (!email || !password) {
-    return res.status(400).json({
-      error: 'BadRequest',
-      message: 'email and password are required.',
-    });
-  }
+    if (!email || !password) {
+      throw new PublicError({
+        statusCode: 400,
+        code: 'BAD_REQUEST',
+        message: 'email and password are required.',
+      });
+    }
 
-  try {
     const session = await loginWithPassword(email, password, { issueRefreshToken: false });
     if (!session) {
-      return res.status(401).json({
-        error: 'Unauthorized',
+      throw new PublicError({
+        statusCode: 401,
+        code: 'UNAUTHORIZED',
         message: 'Invalid email or password.',
       });
     }
     if (!userHasAdminConsoleAccess(session.user)) {
-      return res.status(403).json({
-        error: 'Forbidden',
+      throw new PublicError({
+        statusCode: 403,
+        code: 'FORBIDDEN',
         message: 'Only admin or developer users can access the admin console.',
       });
     }
 
     setAdminSessionCookie(res, session.accessToken);
     return res.json({ user: session.user });
-  } catch (err) {
-    return res.status(500).json({
-      error: 'AdminLoginFailed',
-      message: err.message || 'Unknown error',
-    });
-  }
-});
+  })
+);
 app.post('/admin/logout', (_req, res) => {
   clearAdminSessionCookie(res);
   return res.status(204).end();
@@ -290,22 +302,27 @@ app.get('/health', (req, res) => {
   return res.json(buildHealthPayload());
 });
 
-app.post('/auth/login', loginRateLimitMiddleware, requireConfiguredAuth, async (req, res) => {
-  const email = String(req.body?.email || '').trim();
-  const password = String(req.body?.password || '');
+app.post(
+  '/auth/login',
+  loginRateLimitMiddleware,
+  requireConfiguredAuth,
+  asyncHandler(async (req, res) => {
+    const email = String(req.body?.email || '').trim();
+    const password = String(req.body?.password || '');
 
-  if (!email || !password) {
-    return res.status(400).json({
-      error: 'BadRequest',
-      message: 'email and password are required.',
-    });
-  }
+    if (!email || !password) {
+      throw new PublicError({
+        statusCode: 400,
+        code: 'BAD_REQUEST',
+        message: 'email and password are required.',
+      });
+    }
 
-  try {
     const session = await loginWithPassword(email, password);
     if (!session) {
-      return res.status(401).json({
-        error: 'Unauthorized',
+      throw new PublicError({
+        statusCode: 401,
+        code: 'UNAUTHORIZED',
         message: 'Invalid email or password.',
       });
     }
@@ -319,28 +336,27 @@ app.post('/auth/login', loginRateLimitMiddleware, requireConfiguredAuth, async (
       refreshTokenTtlDays: session.refreshTokenTtlDays,
       user: session.user,
     });
-  } catch (err) {
-    return res.status(500).json({
-      error: 'AuthLoginFailed',
-      message: err.message || 'Unknown error',
-    });
-  }
-});
+  })
+);
 
-app.post('/auth/refresh', requireConfiguredAuth, async (req, res) => {
-  const refreshToken = String(req.body?.refreshToken || '').trim();
-  if (!refreshToken) {
-    return res.status(400).json({
-      error: 'BadRequest',
-      message: 'refreshToken is required.',
-    });
-  }
+app.post(
+  '/auth/refresh',
+  requireConfiguredAuth,
+  asyncHandler(async (req, res) => {
+    const refreshToken = String(req.body?.refreshToken || '').trim();
+    if (!refreshToken) {
+      throw new PublicError({
+        statusCode: 400,
+        code: 'BAD_REQUEST',
+        message: 'refreshToken is required.',
+      });
+    }
 
-  try {
     const session = await refreshUserSession(refreshToken);
     if (!session) {
-      return res.status(401).json({
-        error: 'Unauthorized',
+      throw new PublicError({
+        statusCode: 401,
+        code: 'UNAUTHORIZED',
         message: 'Invalid, expired or revoked refresh token.',
       });
     }
@@ -354,100 +370,94 @@ app.post('/auth/refresh', requireConfiguredAuth, async (req, res) => {
       refreshTokenTtlDays: session.refreshTokenTtlDays,
       user: session.user,
     });
-  } catch (err) {
-    return res.status(500).json({
-      error: 'AuthRefreshFailed',
-      message: err.message || 'Unknown error',
-    });
-  }
-});
+  })
+);
 
-app.post('/auth/logout', requireConfiguredAuth, async (req, res) => {
-  const refreshToken = String(req.body?.refreshToken || '').trim();
-  if (!refreshToken) {
-    return res.status(400).json({
-      error: 'BadRequest',
-      message: 'refreshToken is required.',
-    });
-  }
+app.post(
+  '/auth/logout',
+  requireConfiguredAuth,
+  asyncHandler(async (req, res) => {
+    const refreshToken = String(req.body?.refreshToken || '').trim();
+    if (!refreshToken) {
+      throw new PublicError({
+        statusCode: 400,
+        code: 'BAD_REQUEST',
+        message: 'refreshToken is required.',
+      });
+    }
 
-  try {
     await revokeRefreshToken(refreshToken);
     return res.status(204).end();
-  } catch (err) {
-    return res.status(500).json({
-      error: 'AuthLogoutFailed',
-      message: err.message || 'Unknown error',
-    });
-  }
-});
+  })
+);
 
-app.get('/auth/me', requireConfiguredAuth, requireAuth, async (req, res) => {
-  try {
+app.get(
+  '/auth/me',
+  requireConfiguredAuth,
+  requireAuth,
+  asyncHandler(async (req, res) => {
     const user = await getUserProfile(req.auth.sub);
     if (!user) {
-      return res.status(404).json({
-        error: 'NotFound',
+      throw new PublicError({
+        statusCode: 404,
+        code: 'NOT_FOUND',
         message: 'User not found.',
       });
     }
 
     return res.json({ user });
-  } catch (err) {
-    return res.status(500).json({
-      error: 'AuthProfileFailed',
-      message: err.message || 'Unknown error',
-    });
-  }
-});
+  })
+);
 
-app.get('/api-keys', requireConfiguredAuth, requireAdminOperator, async (req, res) => {
-  if (!isApiKeyServiceConfigured()) {
-    return res.status(503).json({
-      error: 'ApiKeyServiceNotConfigured',
-      message: 'API key service requires DATABASE_URL.',
-    });
-  }
+app.get(
+  '/api-keys',
+  requireConfiguredAuth,
+  requireAdminOperator,
+  asyncHandler(async (_req, res) => {
+    if (!isApiKeyServiceConfigured()) {
+      throw new PublicError({
+        statusCode: 503,
+        code: 'API_KEY_SERVICE_NOT_CONFIGURED',
+        message: 'API key service requires DATABASE_URL.',
+      });
+    }
 
-  try {
     const apiKeys = await listApiKeys();
     return res.json({ apiKeys: apiKeys.map(toApiKeyResponse) });
-  } catch (err) {
-    return res.status(500).json({
-      error: 'ApiKeysListFailed',
-      message: err.message || 'Unknown error',
-    });
-  }
-});
+  })
+);
 
-app.get('/api-keys/stats', requireConfiguredAuth, requireAdminOperator, async (_req, res) => {
-  if (!isApiKeyServiceConfigured()) {
-    return res.status(503).json({
-      error: 'ApiKeyServiceNotConfigured',
-      message: 'API key service requires DATABASE_URL.',
-    });
-  }
+app.get(
+  '/api-keys/stats',
+  requireConfiguredAuth,
+  requireAdminOperator,
+  asyncHandler(async (_req, res) => {
+    if (!isApiKeyServiceConfigured()) {
+      throw new PublicError({
+        statusCode: 503,
+        code: 'API_KEY_SERVICE_NOT_CONFIGURED',
+        message: 'API key service requires DATABASE_URL.',
+      });
+    }
 
-  try {
     const stats = await getApiKeyStats();
     return res.json({ stats });
-  } catch (err) {
-    return res.status(500).json({
-      error: 'ApiKeyStatsFailed',
-      message: err.message || 'Unknown error',
-    });
-  }
-});
+  })
+);
 
-app.get('/audit-logs', requireConfiguredAuth, requireAdminOperator, async (req, res) => {
-  if (!isApiKeyServiceConfigured()) {
-    return res.status(503).json({
-      error: 'AuditServiceNotConfigured',
-      message: 'Audit service requires DATABASE_URL.',
-    });
-  }
+app.get(
+  '/audit-logs',
+  requireConfiguredAuth,
+  requireAdminOperator,
+  asyncHandler(async (req, res) => {
+    if (!isApiKeyServiceConfigured()) {
+      throw new PublicError({
+        statusCode: 503,
+        code: 'AUDIT_SERVICE_NOT_CONFIGURED',
+        message: 'Audit service requires DATABASE_URL.',
+      });
+    }
 
-  try {
     const logs = await listAuditLogs({
       action: req.query.action,
       resourceType: req.query.resourceType,
@@ -458,68 +468,80 @@ app.get('/audit-logs', requireConfiguredAuth, requireAdminOperator, async (req, 
       limit: req.query.limit,
     });
     return res.json({ logs });
-  } catch (err) {
-    return res.status(500).json({
-      error: 'AuditLogsFailed',
-      message: err.message || 'Unknown error',
-    });
-  }
-});
+  })
+);
 
-app.get('/api-keys/:id', requireConfiguredAuth, requireAdminOperator, async (req, res) => {
-  if (!isApiKeyServiceConfigured()) {
-    return res.status(503).json({
-      error: 'ApiKeyServiceNotConfigured',
-      message: 'API key service requires DATABASE_URL.',
-    });
-  }
+app.get(
+  '/api-keys/:id',
+  requireConfiguredAuth,
+  requireAdminOperator,
+  asyncHandler(async (req, res) => {
+    if (!isApiKeyServiceConfigured()) {
+      throw new PublicError({
+        statusCode: 503,
+        code: 'API_KEY_SERVICE_NOT_CONFIGURED',
+        message: 'API key service requires DATABASE_URL.',
+      });
+    }
 
-  try {
     const apiKey = await findApiKeyByIdentifier(req.params.id);
     if (!apiKey) {
-      return res.status(404).json({
-        error: 'NotFound',
+      throw new PublicError({
+        statusCode: 404,
+        code: 'NOT_FOUND',
         message: 'API key not found.',
       });
     }
     return res.json({ apiKey: toApiKeyResponse(apiKey) });
-  } catch (err) {
-    return res.status(500).json({
-      error: 'ApiKeyReadFailed',
-      message: err.message || 'Unknown error',
-    });
-  }
-});
+  })
+);
 
-app.post('/api-keys', requireConfiguredAuth, requireAdminOperator, async (req, res) => {
-  if (!isApiKeyServiceConfigured()) {
-    return res.status(503).json({
-      error: 'ApiKeyServiceNotConfigured',
-      message: 'API key service requires DATABASE_URL.',
-    });
-  }
+app.post(
+  '/api-keys',
+  requireConfiguredAuth,
+  requireAdminOperator,
+  asyncHandler(async (req, res) => {
+    if (!isApiKeyServiceConfigured()) {
+      throw new PublicError({
+        statusCode: 503,
+        code: 'API_KEY_SERVICE_NOT_CONFIGURED',
+        message: 'API key service requires DATABASE_URL.',
+      });
+    }
 
-  const partnerId = String(req.body?.partnerId || '').trim();
-  const name = String(req.body?.name || '').trim();
+    const partnerId = String(req.body?.partnerId || '').trim();
+    const name = String(req.body?.name || '').trim();
 
-  if (!partnerId || !name) {
-    return res.status(400).json({
-      error: 'BadRequest',
-      message: 'partnerId and name are required.',
-    });
-  }
+    if (!partnerId || !name) {
+      throw new PublicError({
+        statusCode: 400,
+        code: 'BAD_REQUEST',
+        message: 'partnerId and name are required.',
+      });
+    }
 
-  try {
-    const created = await createApiKey({
-      ownerUserId: req.auth.sub,
-      partnerId,
-      name,
-      environment: req.body?.environment,
-      role: req.body?.role,
-      scopes: req.body?.scopes,
-      notes: req.body?.notes,
-      expiresAt: req.body?.expiresAt,
-    });
+    let created;
+    try {
+      created = await createApiKey({
+        ownerUserId: req.auth.sub,
+        partnerId,
+        name,
+        environment: req.body?.environment,
+        role: req.body?.role,
+        scopes: req.body?.scopes,
+        notes: req.body?.notes,
+        expiresAt: req.body?.expiresAt,
+      });
+    } catch (err) {
+      if (isApiKeyScopeValidationError(err)) {
+        throw new PublicError({
+          statusCode: 400,
+          code: 'INVALID_SCOPES',
+          message: 'Invalid API key scopes.',
+        });
+      }
+      throw err;
+    }
 
     await writeAuditLog({
       actorUserId: req.auth.sub,
@@ -539,34 +561,27 @@ app.post('/api-keys', requireConfiguredAuth, requireAdminOperator, async (req, r
       apiKey: toApiKeyResponse(created.apiKey),
       secret: created.secret,
     });
-  } catch (err) {
-    if (isApiKeyScopeValidationError(err)) {
-      return res.status(400).json({
-        error: 'BadRequest',
-        message: err.message,
+  })
+);
+
+app.post(
+  '/api-keys/:id/revoke',
+  requireConfiguredAuth,
+  requireAdminOperator,
+  asyncHandler(async (req, res) => {
+    if (!isApiKeyServiceConfigured()) {
+      throw new PublicError({
+        statusCode: 503,
+        code: 'API_KEY_SERVICE_NOT_CONFIGURED',
+        message: 'API key service requires DATABASE_URL.',
       });
     }
 
-    return res.status(500).json({
-      error: 'ApiKeyCreateFailed',
-      message: err.message || 'Unknown error',
-    });
-  }
-});
-
-app.post('/api-keys/:id/revoke', requireConfiguredAuth, requireAdminOperator, async (req, res) => {
-  if (!isApiKeyServiceConfigured()) {
-    return res.status(503).json({
-      error: 'ApiKeyServiceNotConfigured',
-      message: 'API key service requires DATABASE_URL.',
-    });
-  }
-
-  try {
     const existing = await findApiKeyByIdentifier(req.params.id);
     if (!existing) {
-      return res.status(404).json({
-        error: 'NotFound',
+      throw new PublicError({
+        statusCode: 404,
+        code: 'NOT_FOUND',
         message: 'API key not found.',
       });
     }
@@ -586,27 +601,27 @@ app.post('/api-keys/:id/revoke', requireConfiguredAuth, requireAdminOperator, as
     });
 
     return res.json({ apiKey: toApiKeyResponse(revoked) });
-  } catch (err) {
-    return res.status(500).json({
-      error: 'ApiKeyRevokeFailed',
-      message: err.message || 'Unknown error',
-    });
-  }
-});
+  })
+);
 
-app.post('/api-keys/:id/reactivate', requireConfiguredAuth, requireAdminOperator, async (req, res) => {
-  if (!isApiKeyServiceConfigured()) {
-    return res.status(503).json({
-      error: 'ApiKeyServiceNotConfigured',
-      message: 'API key service requires DATABASE_URL.',
-    });
-  }
+app.post(
+  '/api-keys/:id/reactivate',
+  requireConfiguredAuth,
+  requireAdminOperator,
+  asyncHandler(async (req, res) => {
+    if (!isApiKeyServiceConfigured()) {
+      throw new PublicError({
+        statusCode: 503,
+        code: 'API_KEY_SERVICE_NOT_CONFIGURED',
+        message: 'API key service requires DATABASE_URL.',
+      });
+    }
 
-  try {
     const existing = await findApiKeyByIdentifier(req.params.id);
     if (!existing) {
-      return res.status(404).json({
-        error: 'NotFound',
+      throw new PublicError({
+        statusCode: 404,
+        code: 'NOT_FOUND',
         message: 'API key not found.',
       });
     }
@@ -626,27 +641,27 @@ app.post('/api-keys/:id/reactivate', requireConfiguredAuth, requireAdminOperator
     });
 
     return res.json({ apiKey: toApiKeyResponse(apiKey) });
-  } catch (err) {
-    return res.status(500).json({
-      error: 'ApiKeyReactivateFailed',
-      message: err.message || 'Unknown error',
-    });
-  }
-});
+  })
+);
 
-app.post('/api-keys/:id/rotate', requireConfiguredAuth, requireAdminOperator, async (req, res) => {
-  if (!isApiKeyServiceConfigured()) {
-    return res.status(503).json({
-      error: 'ApiKeyServiceNotConfigured',
-      message: 'API key service requires DATABASE_URL.',
-    });
-  }
+app.post(
+  '/api-keys/:id/rotate',
+  requireConfiguredAuth,
+  requireAdminOperator,
+  asyncHandler(async (req, res) => {
+    if (!isApiKeyServiceConfigured()) {
+      throw new PublicError({
+        statusCode: 503,
+        code: 'API_KEY_SERVICE_NOT_CONFIGURED',
+        message: 'API key service requires DATABASE_URL.',
+      });
+    }
 
-  try {
     const rotated = await rotateApiKey(req.params.id);
     if (!rotated) {
-      return res.status(404).json({
-        error: 'NotFound',
+      throw new PublicError({
+        statusCode: 404,
+        code: 'NOT_FOUND',
         message: 'API key not found.',
       });
     }
@@ -670,39 +685,51 @@ app.post('/api-keys/:id/rotate', requireConfiguredAuth, requireAdminOperator, as
       apiKey: toApiKeyResponse(rotated.apiKey),
       secret: rotated.secret,
     });
-  } catch (err) {
-    return res.status(500).json({
-      error: 'ApiKeyRotateFailed',
-      message: err.message || 'Unknown error',
-    });
-  }
-});
+  })
+);
 
-app.patch('/api-keys/:id', requireConfiguredAuth, requireAdminOperator, async (req, res) => {
-  if (!isApiKeyServiceConfigured()) {
-    return res.status(503).json({
-      error: 'ApiKeyServiceNotConfigured',
-      message: 'API key service requires DATABASE_URL.',
-    });
-  }
+app.patch(
+  '/api-keys/:id',
+  requireConfiguredAuth,
+  requireAdminOperator,
+  asyncHandler(async (req, res) => {
+    if (!isApiKeyServiceConfigured()) {
+      throw new PublicError({
+        statusCode: 503,
+        code: 'API_KEY_SERVICE_NOT_CONFIGURED',
+        message: 'API key service requires DATABASE_URL.',
+      });
+    }
 
-  try {
     const existing = await findApiKeyByIdentifier(req.params.id);
     if (!existing) {
-      return res.status(404).json({
-        error: 'NotFound',
+      throw new PublicError({
+        statusCode: 404,
+        code: 'NOT_FOUND',
         message: 'API key not found.',
       });
     }
 
-    const apiKey = await updateApiKey(req.params.id, {
-      name: req.body?.name,
-      role: req.body?.role,
-      scopes: req.body?.scopes,
-      notes: req.body?.notes,
-      expiresAt: req.body?.expiresAt,
-      isActive: req.body?.isActive,
-    });
+    let apiKey;
+    try {
+      apiKey = await updateApiKey(req.params.id, {
+        name: req.body?.name,
+        role: req.body?.role,
+        scopes: req.body?.scopes,
+        notes: req.body?.notes,
+        expiresAt: req.body?.expiresAt,
+        isActive: req.body?.isActive,
+      });
+    } catch (err) {
+      if (isApiKeyScopeValidationError(err)) {
+        throw new PublicError({
+          statusCode: 400,
+          code: 'INVALID_SCOPES',
+          message: 'Invalid API key scopes.',
+        });
+      }
+      throw err;
+    }
 
     await writeAuditLog({
       actorUserId: req.auth.sub,
@@ -718,30 +745,19 @@ app.patch('/api-keys/:id', requireConfiguredAuth, requireAdminOperator, async (r
     });
 
     return res.json({ apiKey: toApiKeyResponse(apiKey) });
-  } catch (err) {
-    if (isApiKeyScopeValidationError(err)) {
-      return res.status(400).json({
-        error: 'BadRequest',
-        message: err.message,
-      });
-    }
-
-    return res.status(500).json({
-      error: 'ApiKeyUpdateFailed',
-      message: err.message || 'Unknown error',
-    });
-  }
-});
+  })
+);
 
 app.get(
   '/apartments',
   rateLimitMiddleware,
   requireApiKey,
   requireApiKeyScope(API_KEY_SCOPES.APARTMENTS_READ),
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     if (isLiveRequestRunning) {
-      return res.status(409).json({
-        error: 'Conflict',
+      throw new PublicError({
+        statusCode: 409,
+        code: 'CONFLICT',
         message: 'Another live onOffice sync is already running.',
       });
     }
@@ -765,18 +781,15 @@ app.get(
           durationMs: finishedAt.getTime() - startedAt.getTime(),
         },
       });
-    } catch (err) {
-      return res.status(500).json({
-        error: 'LiveFetchFailed',
-        message: err.message || 'Unknown error',
-      });
     } finally {
       isLiveRequestRunning = false;
     }
-  }
+  })
 );
 
 let isShuttingDown = false;
+
+app.use(errorHandler);
 
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Hope Apartments API listening on port ${PORT}`);

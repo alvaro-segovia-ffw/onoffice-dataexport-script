@@ -1,5 +1,7 @@
 'use strict';
 
+const { PublicError } = require('../errors/public-error');
+
 function defaultMessageBuilder({ maxRequests, windowSec }) {
   return `Rate limit exceeded. Max ${maxRequests} requests per ${windowSec}s.`;
 }
@@ -55,13 +57,16 @@ function createInMemoryRateLimit(options = {}) {
 
     if (entry.count > maxRequests) {
       res.setHeader('retry-after', String(resetSec));
-      return res.status(429).json({
-        error: errorCode,
-        message:
-          typeof messageBuilder === 'function'
-            ? messageBuilder({ req, maxRequests, windowSec })
-            : String(messageBuilder || defaultMessageBuilder({ maxRequests, windowSec })),
-      });
+      return next(
+        new PublicError({
+          statusCode: 429,
+          code: errorCode,
+          message:
+            typeof messageBuilder === 'function'
+              ? messageBuilder({ req, maxRequests, windowSec })
+              : String(messageBuilder || defaultMessageBuilder({ maxRequests, windowSec })),
+        })
+      );
     }
 
     return next();

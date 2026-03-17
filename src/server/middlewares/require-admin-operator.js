@@ -3,6 +3,7 @@
 const { getUserProfile, isAuthConfigured } = require('../../../lib/auth-service');
 const { getCookie } = require('../../../lib/cookies');
 const { verifyAccessToken } = require('../../../lib/jwt');
+const { PublicError } = require('../errors/public-error');
 const { extractBearerToken } = require('./require-auth');
 
 const allowedRoles = new Set(['admin', 'developer']);
@@ -21,59 +22,61 @@ function extractAdminToken(req) {
 
 async function authenticateAdminOperator(req) {
   if (!isAuthConfigured()) {
-    const err = new Error('Auth is not configured.');
-    err.statusCode = 503;
-    err.errorCode = 'AuthNotConfigured';
-    throw err;
+    throw new PublicError({
+      statusCode: 503,
+      code: 'AUTH_NOT_CONFIGURED',
+      message: 'Auth is not configured.',
+    });
   }
 
   const token = extractAdminToken(req);
   if (!token) {
-    const err = new Error('Missing admin session or Bearer token.');
-    err.statusCode = 401;
-    err.errorCode = 'Unauthorized';
-    throw err;
+    throw new PublicError({
+      statusCode: 401,
+      code: 'UNAUTHORIZED',
+      message: 'Missing admin session or Bearer token.',
+    });
   }
 
   let claims;
   try {
     claims = verifyAccessToken(token);
-  } catch (err) {
-    const authErr = new Error(err.message || 'Invalid access token.');
-    authErr.statusCode = 401;
-    authErr.errorCode = 'Unauthorized';
-    throw authErr;
+  } catch (_err) {
+    throw new PublicError({
+      statusCode: 401,
+      code: 'UNAUTHORIZED',
+      message: 'Invalid access token.',
+    });
   }
 
   const user = await getUserProfile(claims.sub);
   if (!user || user.status !== 'active') {
-    const err = new Error('User not found or inactive.');
-    err.statusCode = 401;
-    err.errorCode = 'Unauthorized';
-    throw err;
+    throw new PublicError({
+      statusCode: 401,
+      code: 'UNAUTHORIZED',
+      message: 'User not found or inactive.',
+    });
   }
 
   if (!userHasAdminConsoleAccess(user)) {
-    const err = new Error('Admin console access requires admin or developer role.');
-    err.statusCode = 403;
-    err.errorCode = 'Forbidden';
-    throw err;
+    throw new PublicError({
+      statusCode: 403,
+      code: 'FORBIDDEN',
+      message: 'Admin console access requires admin or developer role.',
+    });
   }
 
   return { token, claims, user };
 }
 
-async function requireAdminOperator(req, res, next) {
+async function requireAdminOperator(req, _res, next) {
   try {
     const auth = await authenticateAdminOperator(req);
     req.adminAuth = auth;
     req.auth = auth.claims;
     return next();
   } catch (err) {
-    return res.status(err.statusCode || 500).json({
-      error: err.errorCode || 'AdminAuthFailed',
-      message: err.message || 'Unknown error',
-    });
+    return next(err);
   }
 }
 

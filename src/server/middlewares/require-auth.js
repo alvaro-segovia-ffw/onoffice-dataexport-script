@@ -1,6 +1,7 @@
 'use strict';
 
 const { verifyAccessToken } = require('../../../lib/jwt');
+const { PublicError } = require('../errors/public-error');
 
 function extractBearerToken(req) {
   const header = String(req.header('authorization') || '');
@@ -9,23 +10,29 @@ function extractBearerToken(req) {
   return token || null;
 }
 
-function requireAuth(req, res, next) {
+function requireAuth(req, _res, next) {
   const token = extractBearerToken(req);
   if (!token) {
-    return res.status(401).json({
-      error: 'Unauthorized',
-      message: 'Missing Bearer token.',
-    });
+    return next(
+      new PublicError({
+        statusCode: 401,
+        code: 'UNAUTHORIZED',
+        message: 'Missing Bearer token.',
+      })
+    );
   }
 
   try {
     req.auth = verifyAccessToken(token);
     return next();
-  } catch (err) {
-    return res.status(401).json({
-      error: 'Unauthorized',
-      message: err.message || 'Invalid access token.',
-    });
+  } catch (_err) {
+    return next(
+      new PublicError({
+        statusCode: 401,
+        code: 'UNAUTHORIZED',
+        message: 'Invalid access token.',
+      })
+    );
   }
 }
 
