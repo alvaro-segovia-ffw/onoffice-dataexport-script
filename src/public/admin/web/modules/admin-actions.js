@@ -6,6 +6,18 @@ import { setActiveView } from './admin-view.js';
 import { setStatus, writeJson } from './dom-utils.js';
 
 let lastGeneratedCreatePartnerId = '';
+let createStepIndex = 0;
+
+const CREATE_STEP_CONTENT = [
+  {
+    title: 'Step 1 · Identity',
+    description: 'Define the partner label and the stable identifier used across keys and logs.',
+  },
+  {
+    title: 'Step 2 · Access',
+    description: 'Confirm the scope and add optional notes before generating the live key.',
+  },
+];
 
 function handleAuthError(err) {
   if (/session|authorized|role/i.test(err.message)) {
@@ -53,6 +65,55 @@ function updateCreatePartnerIdFromName() {
 
 function resetCreatePartnerIdAutofill() {
   lastGeneratedCreatePartnerId = '';
+}
+
+function validateCreateStep(stepIndex) {
+  if (stepIndex === 0) {
+    const name = String(els.createName.value || '').trim();
+    const partnerId = normalizePartnerId(els.createPartnerId.value);
+    els.createPartnerId.value = partnerId;
+
+    if (!name || !partnerId) {
+      setStatus(els.createStatus, 'complete step 1', false);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function renderCreateSteps() {
+  const stepContent = CREATE_STEP_CONTENT[createStepIndex] || CREATE_STEP_CONTENT[0];
+  els.createStepTitle.textContent = stepContent.title;
+  els.createStepDescription.textContent = stepContent.description;
+
+  for (const [index, step] of els.createSteps.entries()) {
+    const isActive = index === createStepIndex;
+    step.hidden = !isActive;
+    step.classList.toggle('active', isActive);
+  }
+
+  for (const [index, indicator] of els.createStepIndicators.entries()) {
+    indicator.classList.toggle('active', index === createStepIndex);
+    indicator.classList.toggle('done', index < createStepIndex);
+  }
+
+  els.btnCreateBack.hidden = createStepIndex === 0;
+  els.btnCreateNext.hidden = createStepIndex === CREATE_STEP_CONTENT.length - 1;
+  els.btnCreateSubmit.hidden = createStepIndex !== CREATE_STEP_CONTENT.length - 1;
+}
+
+export function handleCreateStepNext() {
+  if (!validateCreateStep(createStepIndex)) return;
+  createStepIndex = Math.min(createStepIndex + 1, CREATE_STEP_CONTENT.length - 1);
+  setStatus(els.createStatus, `step ${createStepIndex + 1}`, null);
+  renderCreateSteps();
+}
+
+export function handleCreateStepBack() {
+  createStepIndex = Math.max(createStepIndex - 1, 0);
+  setStatus(els.createStatus, `step ${createStepIndex + 1}`, null);
+  renderCreateSteps();
 }
 
 export async function fetchCurrentSession() {
@@ -139,6 +200,8 @@ export async function createApiKey(event) {
     els.createPartnerId.value = '';
     els.createName.value = '';
     resetCreatePartnerIdAutofill();
+    createStepIndex = 0;
+    renderCreateSteps();
     setActiveView('keys');
     await Promise.all([loadApiKeys(), loadStats(), loadAuditLogs({ limit: 20 })]);
   } catch (err) {
@@ -228,4 +291,5 @@ export function handleAuditSubmit(event) {
 
 export function bindCreateFormBehavior() {
   els.createName.addEventListener('input', updateCreatePartnerIdFromName);
+  renderCreateSteps();
 }

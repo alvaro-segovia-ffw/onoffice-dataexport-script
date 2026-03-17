@@ -4,6 +4,8 @@ import {
   createApiKey,
   fetchCurrentSession,
   handleAuditSubmit,
+  handleCreateStepBack,
+  handleCreateStepNext,
   handleKeyDetailSubmit,
   handleKeyAction,
   handleKeySelection,
@@ -18,6 +20,8 @@ function bindEvents() {
   els.btnLoad.addEventListener('click', loadDashboard);
   els.createForm.addEventListener('submit', createApiKey);
   bindCreateFormBehavior();
+  els.btnCreateNext.addEventListener('click', handleCreateStepNext);
+  els.btnCreateBack.addEventListener('click', handleCreateStepBack);
   els.keysTable.addEventListener('click', handleKeySelection);
   els.keyDetailForm.addEventListener('submit', handleKeyDetailSubmit);
   els.keyDetailActions.addEventListener('click', handleKeyAction);
