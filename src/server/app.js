@@ -22,6 +22,7 @@ const {
   rotateApiKey,
   updateApiKey,
 } = require('../../lib/api-key-service');
+const { API_KEY_SCOPES, isApiKeyScopeValidationError } = require('../../lib/api-key-scopes');
 const { listAuditLogs, writeAuditLog } = require('../../lib/audit-service');
 const { requireApiKey } = require('./middlewares/require-api-key');
 const { serializeCookie } = require('../../lib/cookies');
@@ -539,6 +540,13 @@ app.post('/api-keys', requireConfiguredAuth, requireAdminOperator, async (req, r
       secret: created.secret,
     });
   } catch (err) {
+    if (isApiKeyScopeValidationError(err)) {
+      return res.status(400).json({
+        error: 'BadRequest',
+        message: err.message,
+      });
+    }
+
     return res.status(500).json({
       error: 'ApiKeyCreateFailed',
       message: err.message || 'Unknown error',
@@ -711,6 +719,13 @@ app.patch('/api-keys/:id', requireConfiguredAuth, requireAdminOperator, async (r
 
     return res.json({ apiKey: toApiKeyResponse(apiKey) });
   } catch (err) {
+    if (isApiKeyScopeValidationError(err)) {
+      return res.status(400).json({
+        error: 'BadRequest',
+        message: err.message,
+      });
+    }
+
     return res.status(500).json({
       error: 'ApiKeyUpdateFailed',
       message: err.message || 'Unknown error',
@@ -722,7 +737,7 @@ app.get(
   '/apartments',
   rateLimitMiddleware,
   requireApiKey,
-  requireApiKeyScope('apartments:read'),
+  requireApiKeyScope(API_KEY_SCOPES.APARTMENTS_READ),
   async (req, res) => {
     if (isLiveRequestRunning) {
       return res.status(409).json({

@@ -11,7 +11,8 @@ const {
   normalizeApiKeyEnvironment,
   parseApiKey,
 } = require('../lib/api-key');
-const { isApiKeyUsable, mapApiKeyRow } = require('../lib/api-key-service');
+const { API_KEY_SCOPES, SUPPORTED_API_KEY_SCOPES, isApiKeyScopeValidationError } = require('../lib/api-key-scopes');
+const { createApiKey, isApiKeyUsable, mapApiKeyRow, updateApiKey } = require('../lib/api-key-service');
 
 test('generateApiKey creates parseable live key by default', () => {
   const generated = generateApiKey();
@@ -81,4 +82,60 @@ test('mapApiKeyRow normalizes database fields to API contract', () => {
   assert.equal(mapped.keyPrefix, 'hop_live_abc123def456');
   assert.equal(mapped.role, 'client');
   assert.deepEqual(mapped.scopes, ['apartments:read']);
+});
+
+test('supported API key scopes are centrally defined', () => {
+  assert.deepEqual(SUPPORTED_API_KEY_SCOPES, [API_KEY_SCOPES.APARTMENTS_READ]);
+});
+
+test('createApiKey requires explicit valid scopes', async () => {
+  await assert.rejects(
+    createApiKey({
+      partnerId: 'partner-a',
+      name: 'Partner A',
+      scopes: [],
+    }),
+    (err) => {
+      assert.equal(isApiKeyScopeValidationError(err), true);
+      assert.equal(err.message, 'At least one API key scope is required.');
+      return true;
+    }
+  );
+
+  await assert.rejects(
+    createApiKey({
+      partnerId: 'partner-a',
+      name: 'Partner A',
+      scopes: ['unknown:scope'],
+    }),
+    (err) => {
+      assert.equal(isApiKeyScopeValidationError(err), true);
+      assert.equal(err.message, 'Unsupported API key scopes: unknown:scope.');
+      return true;
+    }
+  );
+});
+
+test('updateApiKey validates provided scopes against the supported allowlist', async () => {
+  await assert.rejects(
+    updateApiKey('hop_live_abc123def456', {
+      scopes: [],
+    }),
+    (err) => {
+      assert.equal(isApiKeyScopeValidationError(err), true);
+      assert.equal(err.message, 'At least one API key scope is required.');
+      return true;
+    }
+  );
+
+  await assert.rejects(
+    updateApiKey('hop_live_abc123def456', {
+      scopes: ['apartments:read', 'unknown:scope'],
+    }),
+    (err) => {
+      assert.equal(isApiKeyScopeValidationError(err), true);
+      assert.equal(err.message, 'Unsupported API key scopes: unknown:scope.');
+      return true;
+    }
+  );
 });

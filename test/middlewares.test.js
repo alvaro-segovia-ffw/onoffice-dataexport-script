@@ -3,6 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
+const { API_KEY_SCOPES } = require('../lib/api-key-scopes');
 const { DOCS_ALLOWED_ROLES } = require('../middlewares/docs-access');
 const { requireRole } = require('../middlewares/require-role');
 const { requireApiKeyScope } = require('../src/server/middlewares/require-api-key-scope');
@@ -114,14 +115,13 @@ function createApiKeyScopeRequest(scopes = []) {
 }
 
 test('requireApiKeyScope allows a valid key with the required scope', async () => {
-  const middleware = requireApiKeyScope('apartments:read', {
-    mode: 'enforce',
+  const middleware = requireApiKeyScope(API_KEY_SCOPES.APARTMENTS_READ, {
     auditLogWriter: async () => {
       throw new Error('audit should not be called');
     },
   });
 
-  const req = createApiKeyScopeRequest(['apartments:read']);
+  const req = createApiKeyScopeRequest([API_KEY_SCOPES.APARTMENTS_READ]);
   const res = createResponseDouble();
   let nextCalled = false;
 
@@ -134,58 +134,9 @@ test('requireApiKeyScope allows a valid key with the required scope', async () =
   assert.equal(res.payload, null);
 });
 
-test('requireApiKeyScope mode off preserves current behavior without scope', async () => {
-  let auditCalls = 0;
-  const middleware = requireApiKeyScope('apartments:read', {
-    mode: 'off',
-    auditLogWriter: async () => {
-      auditCalls += 1;
-    },
-  });
-
-  const req = createApiKeyScopeRequest([]);
-  const res = createResponseDouble();
-  let nextCalled = false;
-
-  await middleware(req, res, () => {
-    nextCalled = true;
-  });
-
-  assert.equal(nextCalled, true);
-  assert.equal(res.statusCode, 200);
-  assert.equal(auditCalls, 0);
-});
-
-test('requireApiKeyScope mode audit allows request and records scope denial', async () => {
+test('requireApiKeyScope rejects a valid key without the required scope and records scope denial', async () => {
   const auditEntries = [];
-  const middleware = requireApiKeyScope('apartments:read', {
-    mode: 'audit',
-    auditLogWriter: async (entry) => {
-      auditEntries.push(entry);
-    },
-  });
-
-  const req = createApiKeyScopeRequest([]);
-  const res = createResponseDouble();
-  let nextCalled = false;
-
-  await middleware(req, res, () => {
-    nextCalled = true;
-  });
-
-  assert.equal(nextCalled, true);
-  assert.equal(res.statusCode, 200);
-  assert.equal(auditEntries.length, 1);
-  assert.equal(auditEntries[0].action, 'api_key_scope_denied');
-  assert.equal(auditEntries[0].metadata.requiredScope, 'apartments:read');
-  assert.equal(auditEntries[0].metadata.mode, 'audit');
-  assert.equal(auditEntries[0].metadata.enforced, false);
-});
-
-test('requireApiKeyScope mode enforce rejects a valid key without the required scope', async () => {
-  const auditEntries = [];
-  const middleware = requireApiKeyScope('apartments:read', {
-    mode: 'enforce',
+  const middleware = requireApiKeyScope(API_KEY_SCOPES.APARTMENTS_READ, {
     auditLogWriter: async (entry) => {
       auditEntries.push(entry);
     },
@@ -202,34 +153,9 @@ test('requireApiKeyScope mode enforce rejects a valid key without the required s
   assert.equal(nextCalled, false);
   assert.equal(res.statusCode, 403);
   assert.equal(res.payload.error, 'Forbidden');
-  assert.equal(res.payload.message, 'Missing required API key scope: apartments:read.');
+  assert.equal(res.payload.message, `Missing required API key scope: ${API_KEY_SCOPES.APARTMENTS_READ}.`);
   assert.equal(auditEntries.length, 1);
-  assert.equal(auditEntries[0].metadata.mode, 'enforce');
+  assert.equal(auditEntries[0].action, 'api_key_scope_denied');
+  assert.equal(auditEntries[0].metadata.requiredScope, API_KEY_SCOPES.APARTMENTS_READ);
   assert.equal(auditEntries[0].metadata.enforced, true);
-});
-
-test('requireApiKeyScope reads rollout mode from env when mode is omitted', async () => {
-  const previousMode = process.env.APARTMENTS_API_KEY_SCOPE_MODE;
-  process.env.APARTMENTS_API_KEY_SCOPE_MODE = 'enforce';
-
-  try {
-    const middleware = requireApiKeyScope('apartments:read', {
-      auditLogWriter: async () => null,
-    });
-
-    const req = createApiKeyScopeRequest([]);
-    const res = createResponseDouble();
-    let nextCalled = false;
-
-    await middleware(req, res, () => {
-      nextCalled = true;
-    });
-
-    assert.equal(nextCalled, false);
-    assert.equal(res.statusCode, 403);
-    assert.equal(res.payload.error, 'Forbidden');
-  } finally {
-    if (previousMode === undefined) delete process.env.APARTMENTS_API_KEY_SCOPE_MODE;
-    else process.env.APARTMENTS_API_KEY_SCOPE_MODE = previousMode;
-  }
 });

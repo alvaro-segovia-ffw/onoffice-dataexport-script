@@ -2,12 +2,6 @@
 
 const { writeAuditLog } = require('../../../lib/audit-service');
 
-function normalizeApiKeyScopeMode(mode) {
-  const normalized = String(mode || 'off').trim().toLowerCase();
-  if (normalized === 'audit' || normalized === 'enforce') return normalized;
-  return 'off';
-}
-
 function getApiKeyScopes(req) {
   if (Array.isArray(req.apiKey?.scopes)) return req.apiKey.scopes;
   if (Array.isArray(req.authActor?.scopes)) return req.authActor.scopes;
@@ -18,7 +12,7 @@ function hasRequiredScope(req, requiredScope) {
   return getApiKeyScopes(req).includes(requiredScope);
 }
 
-function buildScopeAuditEntry(req, requiredScope, mode) {
+function buildScopeAuditEntry(req, requiredScope) {
   const apiKey = req.apiKey || {};
   const scopes = getApiKeyScopes(req);
 
@@ -34,8 +28,7 @@ function buildScopeAuditEntry(req, requiredScope, mode) {
       keyPrefix: apiKey.keyPrefix || null,
       requiredScope,
       scopes,
-      mode,
-      enforced: mode === 'enforce',
+      enforced: true,
       method: req.method || null,
       route: req.originalUrl || req.url || null,
     },
@@ -53,20 +46,13 @@ function requireApiKeyScope(requiredScope, options = {}) {
       });
     }
 
-    const mode = normalizeApiKeyScopeMode(
-      options.mode === undefined ? process.env.APARTMENTS_API_KEY_SCOPE_MODE : options.mode
-    );
-
-    if (mode === 'off') return next();
     if (hasRequiredScope(req, requiredScope)) return next();
 
     try {
-      await auditLogWriter(buildScopeAuditEntry(req, requiredScope, mode));
+      await auditLogWriter(buildScopeAuditEntry(req, requiredScope));
     } catch (_err) {
       // Scope enforcement should not fail open or break requests because audit persistence failed.
     }
-
-    if (mode === 'audit') return next();
 
     return res.status(403).json({
       error: 'Forbidden',
@@ -81,6 +67,5 @@ module.exports = {
     buildScopeAuditEntry,
     getApiKeyScopes,
     hasRequiredScope,
-    normalizeApiKeyScopeMode,
   },
 };
