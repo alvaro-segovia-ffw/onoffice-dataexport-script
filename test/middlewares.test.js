@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 
 const { API_KEY_SCOPES } = require('../lib/api-key-scopes');
 const {
+  DEVELOPER_INTERNAL_PERMISSION_SET,
   FULL_INTERNAL_PERMISSION_SET,
   INTERNAL_PERMISSIONS,
   getPermissionsForRoles,
@@ -98,8 +99,36 @@ test('admin role resolves the full internal permission set', () => {
   assert.deepEqual(getPermissionsForRoles(['admin']), FULL_INTERNAL_PERMISSION_SET);
 });
 
-test('developer role keeps the same internal permissions in this compatibility phase', () => {
-  assert.deepEqual(getPermissionsForRoles(['developer']), FULL_INTERNAL_PERMISSION_SET);
+test('developer role is restricted to read-oriented internal permissions', () => {
+  assert.deepEqual(getPermissionsForRoles(['developer']), DEVELOPER_INTERNAL_PERMISSION_SET);
+  assert.equal(
+    getPermissionsForRoles(['developer']).includes(INTERNAL_PERMISSIONS.DOCS_READ_INTERNAL),
+    true
+  );
+  assert.equal(
+    getPermissionsForRoles(['developer']).includes(INTERNAL_PERMISSIONS.API_KEYS_READ),
+    true
+  );
+  assert.equal(
+    getPermissionsForRoles(['developer']).includes(INTERNAL_PERMISSIONS.AUDIT_LOGS_READ),
+    true
+  );
+  assert.equal(
+    getPermissionsForRoles(['developer']).includes(INTERNAL_PERMISSIONS.API_KEYS_CREATE),
+    false
+  );
+  assert.equal(
+    getPermissionsForRoles(['developer']).includes(INTERNAL_PERMISSIONS.API_KEYS_UPDATE),
+    false
+  );
+  assert.equal(
+    getPermissionsForRoles(['developer']).includes(INTERNAL_PERMISSIONS.API_KEYS_ROTATE),
+    false
+  );
+  assert.equal(
+    getPermissionsForRoles(['developer']).includes(INTERNAL_PERMISSIONS.API_KEYS_REVOKE),
+    false
+  );
 });
 
 test('requirePermission allows user with required permission', () => {
@@ -121,6 +150,66 @@ test('requirePermission allows user with required permission', () => {
   assert.equal(nextCalled, true);
   assert.equal(Array.isArray(req.internalPermissions), true);
   assert.equal(req.internalPermissions.includes(INTERNAL_PERMISSIONS.API_KEYS_CREATE), true);
+});
+
+test('requirePermission allows developer to read internal docs and audit logs', () => {
+  const docsReq = {
+    adminAuth: {
+      user: {
+        roles: ['developer'],
+      },
+    },
+  };
+  const auditReq = {
+    adminAuth: {
+      user: {
+        roles: ['developer'],
+      },
+    },
+  };
+  const docsRes = createResponseDouble();
+  const auditRes = createResponseDouble();
+  let docsNextCalled = false;
+  let auditNextCalled = false;
+
+  requirePermission(INTERNAL_PERMISSIONS.DOCS_READ_INTERNAL)(docsReq, docsRes, (err) => {
+    assert.equal(err, undefined);
+    docsNextCalled = true;
+  });
+  requirePermission(INTERNAL_PERMISSIONS.AUDIT_LOGS_READ)(auditReq, auditRes, (err) => {
+    assert.equal(err, undefined);
+    auditNextCalled = true;
+  });
+
+  assert.equal(docsNextCalled, true);
+  assert.equal(auditNextCalled, true);
+});
+
+test('requirePermission blocks developer from API key write operations', () => {
+  const req = {
+    adminAuth: {
+      user: {
+        roles: ['developer'],
+      },
+    },
+  };
+  const res = createResponseDouble();
+  let forwardedError = null;
+
+  requirePermission(INTERNAL_PERMISSIONS.API_KEYS_CREATE)(req, res, (err) => {
+    forwardedError = err;
+  });
+
+  assert.equal(forwardedError instanceof PublicError, true);
+
+  runErrorHandler(forwardedError, createRequestDouble({ originalUrl: '/api-keys' }), res);
+
+  assert.equal(res.statusCode, 403);
+  assert.deepEqual(res.payload, {
+    status: 'error',
+    code: 'FORBIDDEN',
+    message: 'Insufficient permission.',
+  });
 });
 
 test('requirePermission blocks user without permission and yields 403', () => {
