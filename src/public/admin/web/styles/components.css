@@ -110,6 +110,22 @@
   box-shadow: 0 0 0 0.2rem rgba(183, 86, 43, 0.12);
 }
 
+.create-key-form {
+  align-items: stretch;
+}
+
+.create-form-block {
+  height: 100%;
+  padding: 1.15rem;
+  border-radius: 1.25rem;
+  border: 1px solid var(--admin-line);
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.create-form-note {
+  max-width: 24rem;
+}
+
 .console-output {
   margin: 0;
   border-radius: 1.1rem;

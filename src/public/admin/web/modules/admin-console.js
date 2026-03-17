@@ -1,5 +1,6 @@
 import { els } from './admin-elements.js';
 import {
+  bindCreateFormBehavior,
   createApiKey,
   fetchCurrentSession,
   handleAuditSubmit,
@@ -16,6 +17,7 @@ import { redirectToLogin } from './admin-api.js';
 function bindEvents() {
   els.btnLoad.addEventListener('click', loadDashboard);
   els.createForm.addEventListener('submit', createApiKey);
+  bindCreateFormBehavior();
   els.keysTable.addEventListener('click', handleKeySelection);
   els.keyDetailForm.addEventListener('submit', handleKeyDetailSubmit);
   els.keyDetailActions.addEventListener('click', handleKeyAction);

@@ -168,57 +168,78 @@
                 <div class="panel-head">
                   <div>
                     <p class="card-kicker">Provisioning</p>
-                    <h3 class="mb-0">Create API Key</h3>
+                    <h3 class="mb-0">Create Partner Key</h3>
                   </div>
                   <span id="createStatus" class="status badge rounded-pill">idle</span>
                 </div>
-                <form id="createForm" class="row g-3 mt-1">
-                  <div class="col-md-6">
-                    <label class="form-label">
-                      Partner ID
-                      <input id="createPartnerId" name="partnerId" type="text" class="form-control" placeholder="partner-roombae" required />
-                    </label>
-                    <p class="helper-copy mt-2 mb-0">Stable partner identifier used across logs and key ownership.</p>
+                <p class="section-copy mt-3 mb-0">
+                  Create a live partner key with the minimum data needed to start integrating.
+                </p>
+                <form id="createForm" class="row g-4 mt-1 create-key-form">
+                  <div class="col-lg-7">
+                    <div class="create-form-block">
+                      <p class="card-kicker mb-3">Identity</p>
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label">
+                            Key Name
+                            <input
+                              id="createName"
+                              name="name"
+                              type="text"
+                              class="form-control"
+                              placeholder="Idealista Main Feed"
+                              required
+                            />
+                          </label>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label">
+                            Partner ID
+                            <input
+                              id="createPartnerId"
+                              name="partnerId"
+                              type="text"
+                              class="form-control"
+                              placeholder="idealista"
+                              required
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div class="col-md-6">
-                    <label class="form-label">
-                      Key Name
-                      <input id="createName" name="name" type="text" class="form-control" placeholder="Roombae Production Access" required />
-                    </label>
-                    <p class="helper-copy mt-2 mb-0">Human-readable label for operators. It does not replace the partner ID.</p>
+                  <div class="col-lg-5">
+                    <div class="create-form-block">
+                      <p class="card-kicker mb-3">Access</p>
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label">
+                            Scope
+                            <select id="createScope" name="scopes" class="form-select">
+                              <option value="apartments:read">apartments:read</option>
+                            </select>
+                          </label>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label">
+                            Notes
+                            <textarea
+                              name="notes"
+                              class="form-control"
+                              rows="4"
+                              placeholder="Optional internal notes"
+                            ></textarea>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div class="col-md-6 col-lg-3">
-                    <label class="form-label">
-                      Environment
-                      <select name="environment" class="form-select">
-                        <option value="live">live</option>
-                        <option value="test">test</option>
-                      </select>
-                    </label>
-                  </div>
-                  <div class="col-md-6 col-lg-3">
-                    <label class="form-label">
-                      Role
-                      <select name="role" class="form-select">
-                        <option value="client">client</option>
-                        <option value="developer">developer</option>
-                        <option value="admin">admin</option>
-                      </select>
-                    </label>
-                  </div>
-                  <div class="col-lg-6">
-                    <label class="form-label">
-                      Scopes
-                      <input name="scopes" type="text" class="form-control" value="apartments:read" />
-                    </label>
-                  </div>
-                  <div class="col-12">
-                    <label class="form-label">
-                      Notes
-                      <input name="notes" type="text" class="form-control" placeholder="Optional notes" />
-                    </label>
-                  </div>
-                  <div class="col-12">
+                  <div class="col-12 d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div class="create-form-note">
+                      <span class="card-kicker">Defaults</span>
+                      <p class="helper-copy mb-0">New partner keys are created as live client keys.</p>
+                    </div>
                     <button type="submit" class="btn btn-admin">Create Key</button>
                   </div>
                 </form>

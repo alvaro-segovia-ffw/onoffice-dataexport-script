@@ -5,6 +5,8 @@ import { getApiKeys, setSelectedApiKeyId } from './admin-state.js';
 import { setActiveView } from './admin-view.js';
 import { setStatus, writeJson } from './dom-utils.js';
 
+let lastGeneratedCreatePartnerId = '';
+
 function handleAuthError(err) {
   if (/session|authorized|role/i.test(err.message)) {
     redirectToLogin();
@@ -37,6 +39,20 @@ function buildAccessPolicyFromFields(value) {
         },
       }
     : {};
+}
+
+function updateCreatePartnerIdFromName() {
+  const normalizedFromName = normalizePartnerId(els.createName.value);
+  const currentPartnerId = String(els.createPartnerId.value || '').trim();
+
+  if (!currentPartnerId || currentPartnerId === lastGeneratedCreatePartnerId) {
+    els.createPartnerId.value = normalizedFromName;
+    lastGeneratedCreatePartnerId = normalizedFromName;
+  }
+}
+
+function resetCreatePartnerIdAutofill() {
+  lastGeneratedCreatePartnerId = '';
 }
 
 export async function fetchCurrentSession() {
@@ -106,9 +122,8 @@ export async function createApiKey(event) {
   const payload = {
     partnerId: normalizedPartnerId,
     name: String(form.get('name') || '').trim(),
-    environment: form.get('environment'),
-    role: form.get('role'),
-    scopes: parseCommaSeparatedList(form.get('scopes')),
+    role: 'client',
+    scopes: [String(form.get('scopes') || '').trim()].filter(Boolean),
     notes: form.get('notes') || null,
   };
 
@@ -123,6 +138,7 @@ export async function createApiKey(event) {
     els.createForm.reset();
     els.createPartnerId.value = '';
     els.createName.value = '';
+    resetCreatePartnerIdAutofill();
     setActiveView('keys');
     await Promise.all([loadApiKeys(), loadStats(), loadAuditLogs({ limit: 20 })]);
   } catch (err) {
@@ -208,4 +224,8 @@ export function handleAuditSubmit(event) {
     action: form.get('action'),
     limit: form.get('limit'),
   });
+}
+
+export function bindCreateFormBehavior() {
+  els.createName.addEventListener('input', updateCreatePartnerIdFromName);
 }
