@@ -122,6 +122,11 @@
   background: rgba(255, 255, 255, 0.68);
 }
 
+.create-scope-row .form-select {
+  min-height: 3.35rem;
+  font-size: 1rem;
+}
+
 .create-form-note {
   max-width: 24rem;
 }
