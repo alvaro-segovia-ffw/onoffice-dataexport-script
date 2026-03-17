@@ -3,24 +3,28 @@
   "info": {
     "title": "Hope Apartments API",
     "version": "1.0.0",
-    "description": "Swagger documentation for the Hope Apartments API. Partner apartment access uses X-API-Key. Internal docs are protected with admin session or Bearer JWT auth."
+    "description": "Internal and partner API documentation for the Hope Apartments service. Partner apartment access uses `X-API-Key` plus API key scopes. Internal routes use Bearer JWT or the admin session cookie where documented."
   },
   "tags": [
     {
       "name": "System",
-      "description": "Operational endpoints"
-    },
-    {
-      "name": "Apartments",
-      "description": "Apartment export endpoints"
+      "description": "Operational and documentation endpoints"
     },
     {
       "name": "Auth",
-      "description": "JWT authentication endpoints"
+      "description": "Human JWT authentication endpoints"
+    },
+    {
+      "name": "Apartments",
+      "description": "Partner apartment export endpoints"
     },
     {
       "name": "API Keys",
       "description": "Internal API key management for partner integrations"
+    },
+    {
+      "name": "Audit Logs",
+      "description": "Internal audit and operational visibility"
     }
   ],
   "paths": {
@@ -34,22 +38,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "ok"
-                    },
-                    "uptimeSec": {
-                      "type": "integer",
-                      "example": 123
-                    },
-                    "now": {
-                      "type": "string",
-                      "format": "date-time"
-                    }
-                  },
-                  "required": ["status", "uptimeSec", "now"]
+                  "$ref": "#/components/schemas/HealthResponse"
                 }
               }
             }
@@ -60,11 +49,126 @@
     "/openapi.json": {
       "get": {
         "tags": ["System"],
-        "summary": "OpenAPI specification",
-        "security": [{ "bearerAuth": [] }],
+        "summary": "Internal OpenAPI specification",
+        "description": "Protected internal OpenAPI document. Requires internal permission `docs:read_internal`.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "adminSession": []
+          }
+        ],
+        "x-required-permission": "docs:read_internal",
         "responses": {
           "200": {
             "description": "OpenAPI document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing admin session or Bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but missing internal docs permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Auth is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/docs": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Internal Swagger UI",
+        "description": "Protected internal Swagger UI. Requires internal permission `docs:read_internal`.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "adminSession": []
+          }
+        ],
+        "x-required-permission": "docs:read_internal",
+        "responses": {
+          "200": {
+            "description": "Interactive internal API documentation",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing admin session or Bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but missing internal docs permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Auth is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.public.json": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Public partner OpenAPI specification",
+        "responses": {
+          "200": {
+            "description": "Public partner OpenAPI document",
             "content": {
               "application/json": {
                 "schema": {
@@ -76,14 +180,13 @@
         }
       }
     },
-    "/docs": {
+    "/docs/public": {
       "get": {
         "tags": ["System"],
-        "summary": "Swagger UI",
-        "security": [{ "bearerAuth": [] }],
+        "summary": "Public partner Swagger UI",
         "responses": {
           "200": {
-            "description": "Interactive API documentation",
+            "description": "Interactive public partner documentation",
             "content": {
               "text/html": {
                 "schema": {
@@ -104,22 +207,160 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "email": { "type": "string", "format": "email" },
-                  "password": { "type": "string" }
-                },
-                "required": ["email", "password"]
+                "$ref": "#/components/schemas/AuthLoginRequest"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Successful login"
+            "description": "Successful login",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSession"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
           },
           "401": {
-            "description": "Invalid credentials"
+            "description": "Invalid email or password",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many login attempts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Auth is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Refresh JWT session",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Refreshed session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSession"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid, expired or revoked refresh token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Auth is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Revoke refresh token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Refresh token revoked"
+          },
+          "400": {
+            "description": "Invalid request payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Auth is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
           }
         }
       }
@@ -128,10 +369,52 @@
       "get": {
         "tags": ["Auth"],
         "summary": "Current authenticated user",
-        "security": [{ "bearerAuth": [] }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "responses": {
-          "200": { "description": "Current user" },
-          "401": { "description": "Unauthorized" }
+          "200": {
+            "description": "Current user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Bearer token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Auth is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -139,23 +422,13 @@
       "get": {
         "tags": ["Apartments"],
         "summary": "Fetch live apartment data",
-        "description": "Returns normalized apartments from onOffice. Partner access requires a valid X-API-Key.",
+        "description": "Returns normalized apartments from onOffice. Requires a valid `X-API-Key` with the `apartments:read` scope.",
         "security": [
           {
             "partnerApiKey": []
           }
         ],
-        "parameters": [
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Partner API key"
-          }
-        ],
+        "x-required-scopes": ["apartments:read"],
         "responses": {
           "200": {
             "description": "Normalized apartment payload",
@@ -186,39 +459,37 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "apartments": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Apartment"
-                      }
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/ResponseMeta"
-                    }
-                  },
-                  "required": ["apartments", "meta"]
+                  "$ref": "#/components/schemas/ApartmentListResponse"
                 }
               }
             }
           },
           "401": {
-            "description": "Unauthorized",
+            "description": "Missing or invalid API key",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Valid API key without the required `apartments:read` scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
                 }
               }
             }
           },
           "409": {
-            "description": "Another sync is already running",
+            "description": "Another live onOffice sync is already running",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/PublicError"
                 }
               }
             }
@@ -235,7 +506,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/PublicError"
                 }
               }
             }
@@ -245,7 +516,17 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "API key auth is not configured on the server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
                 }
               }
             }
@@ -257,21 +538,191 @@
       "get": {
         "tags": ["API Keys"],
         "summary": "List API keys",
-        "security": [{ "bearerAuth": [] }],
+        "description": "Lists partner API keys. Requires internal permission `api_keys:read`. Accessible to `admin` and `developer` with the current permission matrix.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "adminSession": []
+          }
+        ],
+        "x-required-permission": "api_keys:read",
         "responses": {
-          "200": { "description": "API key list" },
-          "401": { "description": "Unauthorized" },
-          "403": { "description": "Forbidden" }
+          "200": {
+            "description": "API key list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid internal auth",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `api_keys:read` permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Auth or API key service is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          }
         }
       },
       "post": {
         "tags": ["API Keys"],
         "summary": "Create API key",
-        "security": [{ "bearerAuth": [] }],
+        "description": "Creates a partner API key. Requires internal permission `api_keys:create`. With the current permission matrix this is effectively admin-only.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "adminSession": []
+          }
+        ],
+        "x-required-permission": "api_keys:create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiKeyCreateRequest"
+              }
+            }
+          }
+        },
         "responses": {
-          "201": { "description": "API key created" },
-          "401": { "description": "Unauthorized" },
-          "403": { "description": "Forbidden" }
+          "201": {
+            "description": "API key created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyCreateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid payload or unsupported scopes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid internal auth",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `api_keys:create` permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Auth or API key service is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api-keys/stats": {
+      "get": {
+        "tags": ["API Keys"],
+        "summary": "API key usage and lifecycle stats",
+        "description": "Returns operational metrics for partner API keys. Requires internal permission `api_keys:read`. Accessible to `admin` and `developer`.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "adminSession": []
+          }
+        ],
+        "x-required-permission": "api_keys:read",
+        "responses": {
+          "200": {
+            "description": "API key stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyStatsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid internal auth",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `api_keys:read` permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Auth or API key service is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -279,37 +730,187 @@
       "get": {
         "tags": ["API Keys"],
         "summary": "Read API key by public identifier",
-        "security": [{ "bearerAuth": [] }],
+        "description": "Reads a partner API key. Requires internal permission `api_keys:read`. Accessible to `admin` and `developer`.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "adminSession": []
+          }
+        ],
+        "x-required-permission": "api_keys:read",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": { "type": "string" },
-            "description": "API key public identifier (key prefix)"
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "API key public identifier (key prefix)."
           }
         ],
         "responses": {
-          "200": { "description": "API key details" },
-          "404": { "description": "Not found" }
+          "200": {
+            "description": "API key details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid API key identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid internal auth",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `api_keys:read` permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "API key not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Auth or API key service is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          }
         }
       },
       "patch": {
         "tags": ["API Keys"],
         "summary": "Update API key",
-        "security": [{ "bearerAuth": [] }],
+        "description": "Updates a partner API key. Requires internal permission `api_keys:update`. With the current permission matrix this is effectively admin-only.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "adminSession": []
+          }
+        ],
+        "x-required-permission": "api_keys:update",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": { "type": "string" },
-            "description": "API key public identifier (key prefix)"
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "API key public identifier (key prefix)."
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiKeyUpdateRequest"
+              }
+            }
+          }
+        },
         "responses": {
-          "200": { "description": "API key updated" },
-          "404": { "description": "Not found" }
+          "200": {
+            "description": "API key updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid path parameter, payload or unsupported scopes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid internal auth",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `api_keys:update` permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "API key not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Auth or API key service is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -317,19 +918,89 @@
       "post": {
         "tags": ["API Keys"],
         "summary": "Revoke API key",
-        "security": [{ "bearerAuth": [] }],
+        "description": "Revokes a partner API key. Requires internal permission `api_keys:revoke`. With the current permission matrix this is effectively admin-only.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "adminSession": []
+          }
+        ],
+        "x-required-permission": "api_keys:revoke",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": { "type": "string" },
-            "description": "API key public identifier (key prefix)"
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "API key public identifier (key prefix)."
           }
         ],
         "responses": {
-          "200": { "description": "API key revoked" },
-          "404": { "description": "Not found" }
+          "200": {
+            "description": "API key revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid API key identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid internal auth",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `api_keys:revoke` permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "API key not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Auth or API key service is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -337,19 +1008,89 @@
       "post": {
         "tags": ["API Keys"],
         "summary": "Reactivate API key",
-        "security": [{ "bearerAuth": [] }],
+        "description": "Reactivates a partner API key. Requires internal permission `api_keys:update`. With the current permission matrix this is effectively admin-only.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "adminSession": []
+          }
+        ],
+        "x-required-permission": "api_keys:update",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": { "type": "string" },
-            "description": "API key public identifier (key prefix)"
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "API key public identifier (key prefix)."
           }
         ],
         "responses": {
-          "200": { "description": "API key reactivated" },
-          "404": { "description": "Not found" }
+          "200": {
+            "description": "API key reactivated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid API key identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid internal auth",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `api_keys:update` permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "API key not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Auth or API key service is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -357,19 +1098,218 @@
       "post": {
         "tags": ["API Keys"],
         "summary": "Rotate API key",
-        "security": [{ "bearerAuth": [] }],
+        "description": "Rotates a partner API key, returns a new secret once and revokes the previous key atomically. Requires internal permission `api_keys:rotate`. With the current permission matrix this is effectively admin-only.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "adminSession": []
+          }
+        ],
+        "x-required-permission": "api_keys:rotate",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": { "type": "string" },
-            "description": "API key public identifier (key prefix)"
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "API key public identifier (key prefix)."
           }
         ],
         "responses": {
-          "200": { "description": "API key rotated" },
-          "404": { "description": "Not found" }
+          "200": {
+            "description": "API key rotated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyRotateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid API key identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid internal auth",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `api_keys:rotate` permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "API key not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Auth or API key service is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/audit-logs": {
+      "get": {
+        "tags": ["Audit Logs"],
+        "summary": "List audit logs",
+        "description": "Returns audit log entries. Requires internal permission `audit_logs:read`. Accessible to `admin` and `developer` with the current permission matrix.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "adminSession": []
+          }
+        ],
+        "x-required-permission": "audit_logs:read",
+        "parameters": [
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resourceType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resourceId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actorUserId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actorApiKeyId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "partnerId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            },
+            "description": "Positive integer. Values above 200 are normalized to 200."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit log entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditLogListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid internal auth",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing `audit_logs:read` permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Auth or audit service is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -379,15 +1319,182 @@
       "partnerApiKey": {
         "type": "apiKey",
         "in": "header",
-        "name": "X-API-Key"
+        "name": "X-API-Key",
+        "description": "Partner API key. For `/apartments` the key must also include the `apartments:read` scope."
       },
       "bearerAuth": {
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "JWT"
+      },
+      "adminSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "hope_admin_session",
+        "description": "Admin session cookie issued by `/admin/login`."
       }
     },
     "schemas": {
+      "PublicError": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["error"]
+          },
+          "code": {
+            "type": "string",
+            "example": "BAD_REQUEST"
+          },
+          "message": {
+            "type": "string",
+            "example": "Invalid API key scopes."
+          }
+        },
+        "required": ["status", "code", "message"]
+      },
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok"
+          },
+          "uptimeSec": {
+            "type": "integer",
+            "example": 123
+          },
+          "now": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "authEnabled": {
+            "type": "boolean"
+          }
+        },
+        "required": ["status", "uptimeSec", "now", "authEnabled"]
+      },
+      "AuthLoginRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["email", "password"]
+      },
+      "RefreshTokenRequest": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["refreshToken"]
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "example": "active"
+          },
+          "lastLoginAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["id", "email", "fullName", "status", "lastLoginAt", "roles"]
+      },
+      "UserEnvelope": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        },
+        "required": ["user"]
+      },
+      "AuthSession": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "tokenType": {
+            "type": "string",
+            "example": "Bearer"
+          },
+          "expiresIn": {
+            "type": "string",
+            "example": "15m"
+          },
+          "refreshToken": {
+            "type": "string",
+            "nullable": true
+          },
+          "refreshTokenExpiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "refreshTokenTtlDays": {
+            "type": "integer",
+            "nullable": true
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        },
+        "required": [
+          "accessToken",
+          "tokenType",
+          "expiresIn",
+          "refreshToken",
+          "refreshTokenExpiresAt",
+          "refreshTokenTtlDays",
+          "user"
+        ]
+      },
+      "ApartmentListResponse": {
+        "type": "object",
+        "properties": {
+          "apartments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Apartment"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "required": ["apartments", "meta"]
+      },
       "Apartment": {
         "type": "object",
         "properties": {
@@ -608,6 +1715,10 @@
             "type": "string",
             "example": "partner-a"
           },
+          "authType": {
+            "type": "string",
+            "example": "api_key"
+          },
           "count": {
             "type": "integer",
             "example": 84
@@ -625,19 +1736,327 @@
             "example": 3000
           }
         },
-        "required": ["requestedBy", "count", "startedAt", "finishedAt", "durationMs"]
+        "required": ["requestedBy", "authType", "count", "startedAt", "finishedAt", "durationMs"]
       },
-      "ErrorResponse": {
+      "ApiKeyScope": {
+        "type": "string",
+        "enum": ["apartments:read"]
+      },
+      "ApiKeyScopes": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/ApiKeyScope"
+        },
+        "minItems": 1,
+        "uniqueItems": true
+      },
+      "ApiKey": {
         "type": "object",
         "properties": {
-          "error": {
+          "publicId": {
+            "type": "string",
+            "example": "hop_live_abc123def456"
+          },
+          "ownerUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "partnerId": {
             "type": "string"
           },
-          "message": {
+          "name": {
             "type": "string"
+          },
+          "environment": {
+            "type": "string",
+            "example": "live"
+          },
+          "keyPrefix": {
+            "type": "string",
+            "example": "hop_live_abc123def456"
+          },
+          "role": {
+            "type": "string",
+            "example": "client"
+          },
+          "scopes": {
+            "$ref": "#/components/schemas/ApiKeyScopes"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "lastUsedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "revokedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           }
         },
-        "required": ["error", "message"]
+        "required": [
+          "publicId",
+          "ownerUserId",
+          "partnerId",
+          "name",
+          "environment",
+          "keyPrefix",
+          "role",
+          "scopes",
+          "notes",
+          "isActive",
+          "lastUsedAt",
+          "expiresAt",
+          "revokedAt",
+          "createdAt"
+        ]
+      },
+      "ApiKeyListResponse": {
+        "type": "object",
+        "properties": {
+          "apiKeys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiKey"
+            }
+          }
+        },
+        "required": ["apiKeys"]
+      },
+      "ApiKeyResponse": {
+        "type": "object",
+        "properties": {
+          "apiKey": {
+            "$ref": "#/components/schemas/ApiKey"
+          }
+        },
+        "required": ["apiKey"]
+      },
+      "ApiKeyCreateRequest": {
+        "type": "object",
+        "properties": {
+          "partnerId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "environment": {
+            "type": "string",
+            "nullable": true,
+            "description": "Optional. Unsupported values normalize to `live` in the service layer."
+          },
+          "role": {
+            "type": "string",
+            "nullable": true
+          },
+          "scopes": {
+            "$ref": "#/components/schemas/ApiKeyScopes"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Optional expiration timestamp string. The backend does not currently enforce a strict date format."
+          }
+        },
+        "required": ["partnerId", "name", "scopes"]
+      },
+      "ApiKeyUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "role": {
+            "type": "string",
+            "nullable": true
+          },
+          "scopes": {
+            "$ref": "#/components/schemas/ApiKeyScopes"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Optional expiration timestamp string. The backend does not currently enforce a strict date format."
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ApiKeyCreateResponse": {
+        "type": "object",
+        "properties": {
+          "apiKey": {
+            "$ref": "#/components/schemas/ApiKey"
+          },
+          "secret": {
+            "type": "string",
+            "description": "Returned once at creation time."
+          }
+        },
+        "required": ["apiKey", "secret"]
+      },
+      "ApiKeyRotateResponse": {
+        "type": "object",
+        "properties": {
+          "previousApiKeyId": {
+            "type": "string"
+          },
+          "apiKey": {
+            "$ref": "#/components/schemas/ApiKey"
+          },
+          "secret": {
+            "type": "string",
+            "description": "Returned once at rotation time."
+          }
+        },
+        "required": ["previousApiKeyId", "apiKey", "secret"]
+      },
+      "ApiKeyStats": {
+        "type": "object",
+        "properties": {
+          "totalKeys": {
+            "type": "integer"
+          },
+          "activeKeys": {
+            "type": "integer"
+          },
+          "revokedKeys": {
+            "type": "integer"
+          },
+          "expiredKeys": {
+            "type": "integer"
+          },
+          "lastKeyUseAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "apiKeyUsed24h": {
+            "type": "integer"
+          },
+          "apiKeyAuthFailed24h": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "totalKeys",
+          "activeKeys",
+          "revokedKeys",
+          "expiredKeys",
+          "lastKeyUseAt",
+          "apiKeyUsed24h",
+          "apiKeyAuthFailed24h"
+        ]
+      },
+      "ApiKeyStatsResponse": {
+        "type": "object",
+        "properties": {
+          "stats": {
+            "$ref": "#/components/schemas/ApiKeyStats"
+          }
+        },
+        "required": ["stats"]
+      },
+      "AuditLog": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actorUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "actorApiKeyId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "action": {
+            "type": "string"
+          },
+          "resourceType": {
+            "type": "string",
+            "nullable": true
+          },
+          "resourceId": {
+            "type": "string",
+            "nullable": true
+          },
+          "ip": {
+            "type": "string",
+            "nullable": true
+          },
+          "userAgent": {
+            "type": "string",
+            "nullable": true
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "actorUserId",
+          "actorApiKeyId",
+          "action",
+          "resourceType",
+          "resourceId",
+          "ip",
+          "userAgent",
+          "metadata",
+          "createdAt"
+        ]
+      },
+      "AuditLogListResponse": {
+        "type": "object",
+        "properties": {
+          "logs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditLog"
+            }
+          }
+        },
+        "required": ["logs"]
       }
     }
   }

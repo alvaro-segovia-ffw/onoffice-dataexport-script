@@ -207,15 +207,15 @@ The `_onoffice-import.csv` file contains only `ImmoNr`, `breitengrad`, and `laen
 - `POST /auth/refresh` (optional, rotates human refresh tokens)
 - `POST /auth/logout` (optional, revokes human refresh tokens)
 - `GET /auth/me` (optional, requires Bearer token)
-- `GET /apartments` (protected)
+- `GET /apartments` (protected, requires `X-API-Key` + `apartments:read`)
 - `GET /api-keys` (admin/developer)
 - `GET /api-keys/stats` (admin/developer)
-- `POST /api-keys` (admin/developer)
+- `POST /api-keys` (admin only)
 - `GET /api-keys/:id` (admin/developer)
-- `PATCH /api-keys/:id` (admin/developer)
-- `POST /api-keys/:id/revoke` (admin/developer)
-- `POST /api-keys/:id/reactivate` (admin/developer)
-- `POST /api-keys/:id/rotate` (admin/developer)
+- `PATCH /api-keys/:id` (admin only)
+- `POST /api-keys/:id/revoke` (admin only)
+- `POST /api-keys/:id/reactivate` (admin only)
+- `POST /api-keys/:id/rotate` (admin only)
 - `GET /audit-logs` (admin/developer)
 - `GET /health` (unprotected health check)
 - `GET /openapi.json` (OpenAPI spec)
@@ -238,6 +238,7 @@ The `_onoffice-import.csv` file contains only `ImmoNr`, `breitengrad`, and `laen
 ### Auth Endpoints
 
 The current API uses `X-API-Key` for partner access to `GET /apartments`.
+That API key must include the `apartments:read` scope.
 In parallel, you can enable real user auth backed by PostgreSQL for internal users and admin tooling.
 
 #### Login
@@ -280,11 +281,12 @@ curl -X GET "http://localhost:3000/auth/me" \
 ### API Key Endpoints
 
 Partner integrations use `X-API-Key` for `GET /apartments`.
+That key must include the `apartments:read` scope.
 
 Create key:
 
 ```bash
-ACCESS_TOKEN="replace_with_admin_or_developer_token"
+ACCESS_TOKEN="replace_with_admin_token"
 
 curl -X POST "http://localhost:3000/api-keys" \
   -H "Authorization: Bearer ${ACCESS_TOKEN}" \
@@ -308,7 +310,8 @@ curl -X GET "http://localhost:3000/apartments" \
   -H "X-API-Key: ${API_KEY}"
 ```
 
-List / read / update / revoke / reactivate API keys require a JWT from a user with role `admin` or `developer`.
+List / read API keys require an internal user with permission `api_keys:read`; with the current permission matrix, both `admin` and `developer` can read.
+Create / update / rotate / revoke / reactivate require internal API key write permissions; with the current permission matrix, those actions are admin-only.
 Rotate returns a brand new secret once and revokes the previous key atomically.
 
 ### Audit And Metrics
@@ -345,12 +348,13 @@ curl -X GET "http://localhost:3000/audit-logs?partnerId=roombae&limit=20" \
 Public docs are intended only for the partner integration surface.
 Internal docs include operational and admin endpoints.
 Both documentation surfaces are always enabled by the application.
-Private docs remain restricted to authenticated users with roles `admin`, `developer`, or `client`.
+Private docs remain restricted to authenticated internal users with permission `docs:read_internal`.
 
 Docs access:
 
 - `Authorization: Bearer <access-token>` from `POST /auth/login`
-- Allowed roles: `admin`, `developer`, `client`
+- or the `hope_admin_session` cookie issued by `POST /admin/login`
+- Current permission matrix: `admin` and `developer` can access internal docs
 
 ### Required Headers
 
@@ -409,6 +413,9 @@ Railway deployment guide:
 - `401 Unauthorized`:
   - Verify the `X-API-Key` is active and not expired.
   - Verify there are no leading/trailing spaces in the header value.
+- `403 Forbidden`:
+  - For `GET /apartments`, verify the API key includes `apartments:read`.
+  - For internal routes, verify the user has the required internal permission.
 - `409 Conflict`:
   - Another request is currently syncing from onOffice; retry shortly.
 - `500 LiveFetchFailed`:
