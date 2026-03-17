@@ -3,7 +3,7 @@
   "info": {
     "title": "Hope Apartments Partner API",
     "version": "1.0.0",
-    "description": "Public partner-facing documentation for the Hope Apartments API. This spec only includes the integration surface required by external partners."
+    "description": "Public partner-facing documentation for the Hope Apartments API. This spec only includes the external integration surface."
   },
   "tags": [
     {
@@ -16,23 +16,13 @@
       "get": {
         "tags": ["Apartments"],
         "summary": "Fetch live apartment data",
-        "description": "Returns normalized apartments from onOffice. Partners authenticate with X-API-Key.",
+        "description": "Returns normalized apartments from onOffice. Requires a valid `X-API-Key` with the `apartments:read` scope.",
         "security": [
           {
             "partnerApiKey": []
           }
         ],
-        "parameters": [
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Partner API key in the format provided by Hope Apartments."
-          }
-        ],
+        "x-required-scopes": ["apartments:read"],
         "responses": {
           "200": {
             "description": "Normalized apartment payload",
@@ -63,39 +53,37 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "apartments": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Apartment"
-                      }
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/ResponseMeta"
-                    }
-                  },
-                  "required": ["apartments", "meta"]
+                  "$ref": "#/components/schemas/ApartmentListResponse"
                 }
               }
             }
           },
           "401": {
-            "description": "Unauthorized",
+            "description": "Missing or invalid API key",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Valid API key without the required `apartments:read` scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
                 }
               }
             }
           },
           "409": {
-            "description": "Another sync is already running",
+            "description": "Another live onOffice sync is already running",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/PublicError"
                 }
               }
             }
@@ -112,7 +100,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/PublicError"
                 }
               }
             }
@@ -122,7 +110,17 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Partner API key auth is not configured on the server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
                 }
               }
             }
@@ -136,10 +134,44 @@
       "partnerApiKey": {
         "type": "apiKey",
         "in": "header",
-        "name": "X-API-Key"
+        "name": "X-API-Key",
+        "description": "Partner API key. The key must be active and include the `apartments:read` scope."
       }
     },
     "schemas": {
+      "PublicError": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["error"]
+          },
+          "code": {
+            "type": "string",
+            "example": "FORBIDDEN"
+          },
+          "message": {
+            "type": "string",
+            "example": "Missing required API key scope: apartments:read."
+          }
+        },
+        "required": ["status", "code", "message"]
+      },
+      "ApartmentListResponse": {
+        "type": "object",
+        "properties": {
+          "apartments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Apartment"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "required": ["apartments", "meta"]
+      },
       "Apartment": {
         "type": "object",
         "properties": {
@@ -287,8 +319,12 @@
           "modified": {
             "nullable": true,
             "oneOf": [
-              { "type": "string" },
-              { "type": "number" }
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
             ]
           }
         },
@@ -378,18 +414,6 @@
           }
         },
         "required": ["requestedBy", "authType", "count", "startedAt", "finishedAt", "durationMs"]
-      },
-      "ErrorResponse": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": ["error", "message"]
       }
     }
   }
