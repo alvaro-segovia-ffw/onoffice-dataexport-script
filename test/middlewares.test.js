@@ -4,9 +4,15 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const { API_KEY_SCOPES } = require('../lib/api-key-scopes');
+const {
+  FULL_INTERNAL_PERMISSION_SET,
+  INTERNAL_PERMISSIONS,
+  getPermissionsForRoles,
+} = require('../src/server/authz/internal-permissions');
 const { PublicError } = require('../src/server/errors/public-error');
-const { DOCS_ALLOWED_ROLES } = require('../middlewares/docs-access');
+const { DOCS_REQUIRED_PERMISSION } = require('../middlewares/docs-access');
 const { errorHandler } = require('../src/server/middlewares/error-handler');
+const { requirePermission } = require('../src/server/middlewares/require-permission');
 const { requireRole } = require('../middlewares/require-role');
 const { requireApiKeyScope } = require('../src/server/middlewares/require-api-key-scope');
 const { createInMemoryRateLimit } = require('../src/server/middlewares/request-rate-limit');
@@ -84,8 +90,62 @@ test('requireRole blocks non-matching roles', () => {
   assert.equal(res.payload.message, 'Insufficient role.');
 });
 
-test('docs access no longer allows client role', () => {
-  assert.deepEqual(DOCS_ALLOWED_ROLES, ['admin', 'developer']);
+test('docs access now requires explicit internal permission', () => {
+  assert.equal(DOCS_REQUIRED_PERMISSION, INTERNAL_PERMISSIONS.DOCS_READ_INTERNAL);
+});
+
+test('admin role resolves the full internal permission set', () => {
+  assert.deepEqual(getPermissionsForRoles(['admin']), FULL_INTERNAL_PERMISSION_SET);
+});
+
+test('developer role keeps the same internal permissions in this compatibility phase', () => {
+  assert.deepEqual(getPermissionsForRoles(['developer']), FULL_INTERNAL_PERMISSION_SET);
+});
+
+test('requirePermission allows user with required permission', () => {
+  const req = {
+    adminAuth: {
+      user: {
+        roles: ['admin'],
+      },
+    },
+  };
+  const res = createResponseDouble();
+  let nextCalled = false;
+
+  requirePermission(INTERNAL_PERMISSIONS.API_KEYS_CREATE)(req, res, (err) => {
+    assert.equal(err, undefined);
+    nextCalled = true;
+  });
+
+  assert.equal(nextCalled, true);
+  assert.equal(Array.isArray(req.internalPermissions), true);
+  assert.equal(req.internalPermissions.includes(INTERNAL_PERMISSIONS.API_KEYS_CREATE), true);
+});
+
+test('requirePermission blocks user without permission and yields 403', () => {
+  const req = {
+    auth: {
+      roles: ['client'],
+    },
+  };
+  const res = createResponseDouble();
+  let forwardedError = null;
+
+  requirePermission(INTERNAL_PERMISSIONS.AUDIT_LOGS_READ)(req, res, (err) => {
+    forwardedError = err;
+  });
+
+  assert.equal(forwardedError instanceof PublicError, true);
+
+  runErrorHandler(forwardedError, createRequestDouble({ originalUrl: '/audit-logs' }), res);
+
+  assert.equal(res.statusCode, 403);
+  assert.deepEqual(res.payload, {
+    status: 'error',
+    code: 'FORBIDDEN',
+    message: 'Insufficient permission.',
+  });
 });
 
 test('in-memory rate limit blocks requests beyond configured max', () => {

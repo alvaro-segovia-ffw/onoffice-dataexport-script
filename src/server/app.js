@@ -3,6 +3,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const { INTERNAL_PERMISSIONS } = require('./authz/internal-permissions');
 const { PublicError } = require('./errors/public-error');
 const {
   loginWithPassword,
@@ -40,6 +41,7 @@ const {
 } = require('./middlewares/require-admin-operator');
 const { requireApiKeyScope } = require('./middlewares/require-api-key-scope');
 const { requireConfiguredAuth } = require('./middlewares/require-configured-auth');
+const { requirePermission } = require('./middlewares/require-permission');
 const { requireAuth } = require('./middlewares/require-auth');
 
 loadDotEnv(path.join(process.cwd(), '.env'));
@@ -413,6 +415,7 @@ app.get(
   '/api-keys',
   requireConfiguredAuth,
   requireAdminOperator,
+  requirePermission(INTERNAL_PERMISSIONS.API_KEYS_READ),
   asyncHandler(async (_req, res) => {
     if (!isApiKeyServiceConfigured()) {
       throw new PublicError({
@@ -431,6 +434,7 @@ app.get(
   '/api-keys/stats',
   requireConfiguredAuth,
   requireAdminOperator,
+  requirePermission(INTERNAL_PERMISSIONS.API_KEYS_READ),
   asyncHandler(async (_req, res) => {
     if (!isApiKeyServiceConfigured()) {
       throw new PublicError({
@@ -449,6 +453,7 @@ app.get(
   '/audit-logs',
   requireConfiguredAuth,
   requireAdminOperator,
+  requirePermission(INTERNAL_PERMISSIONS.AUDIT_LOGS_READ),
   asyncHandler(async (req, res) => {
     if (!isApiKeyServiceConfigured()) {
       throw new PublicError({
@@ -475,6 +480,7 @@ app.get(
   '/api-keys/:id',
   requireConfiguredAuth,
   requireAdminOperator,
+  requirePermission(INTERNAL_PERMISSIONS.API_KEYS_READ),
   asyncHandler(async (req, res) => {
     if (!isApiKeyServiceConfigured()) {
       throw new PublicError({
@@ -500,6 +506,7 @@ app.post(
   '/api-keys',
   requireConfiguredAuth,
   requireAdminOperator,
+  requirePermission(INTERNAL_PERMISSIONS.API_KEYS_CREATE),
   asyncHandler(async (req, res) => {
     if (!isApiKeyServiceConfigured()) {
       throw new PublicError({
@@ -568,6 +575,7 @@ app.post(
   '/api-keys/:id/revoke',
   requireConfiguredAuth,
   requireAdminOperator,
+  requirePermission(INTERNAL_PERMISSIONS.API_KEYS_REVOKE),
   asyncHandler(async (req, res) => {
     if (!isApiKeyServiceConfigured()) {
       throw new PublicError({
@@ -608,6 +616,7 @@ app.post(
   '/api-keys/:id/reactivate',
   requireConfiguredAuth,
   requireAdminOperator,
+  requirePermission(INTERNAL_PERMISSIONS.API_KEYS_UPDATE),
   asyncHandler(async (req, res) => {
     if (!isApiKeyServiceConfigured()) {
       throw new PublicError({
@@ -648,6 +657,7 @@ app.post(
   '/api-keys/:id/rotate',
   requireConfiguredAuth,
   requireAdminOperator,
+  requirePermission(INTERNAL_PERMISSIONS.API_KEYS_ROTATE),
   asyncHandler(async (req, res) => {
     if (!isApiKeyServiceConfigured()) {
       throw new PublicError({
@@ -692,6 +702,7 @@ app.patch(
   '/api-keys/:id',
   requireConfiguredAuth,
   requireAdminOperator,
+  requirePermission(INTERNAL_PERMISSIONS.API_KEYS_UPDATE),
   asyncHandler(async (req, res) => {
     if (!isApiKeyServiceConfigured()) {
       throw new PublicError({

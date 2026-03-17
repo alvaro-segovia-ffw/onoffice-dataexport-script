@@ -1,25 +1,28 @@
 'use strict';
 
+const { INTERNAL_PERMISSIONS } = require('../authz/internal-permissions');
 const { authenticateAdminOperator } = require('./require-admin-operator');
+const { requirePermission } = require('./require-permission');
 const { requireAuth } = require('./require-auth');
-const { requireRole } = require('./require-role');
 
-const DOCS_ALLOWED_ROLES = ['admin', 'developer'];
+const DOCS_REQUIRED_PERMISSION = INTERNAL_PERMISSIONS.DOCS_READ_INTERNAL;
 
 async function requireDocsAccess(req, res, next) {
-  const requireDocsRole = requireRole(...DOCS_ALLOWED_ROLES);
+  const requireDocsPermission = requirePermission(DOCS_REQUIRED_PERMISSION);
   try {
-    await authenticateAdminOperator(req);
-    return next();
+    const auth = await authenticateAdminOperator(req);
+    req.adminAuth = auth;
+    req.auth = auth.claims;
+    return requireDocsPermission(req, res, next);
   } catch (_adminErr) {
     return requireAuth(req, res, (authErr) => {
       if (authErr) return next(authErr);
-      return requireDocsRole(req, res, next);
+      return requireDocsPermission(req, res, next);
     });
   }
 }
 
 module.exports = {
-  DOCS_ALLOWED_ROLES,
+  DOCS_REQUIRED_PERMISSION,
   requireDocsAccess,
 };
