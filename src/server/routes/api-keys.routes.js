@@ -21,16 +21,15 @@ const { requireConfiguredAuth } = require('../middlewares/require-configured-aut
 const { requirePermission } = require('../middlewares/require-permission');
 const { requireSameOriginForCookieAuth } = require('../middlewares/require-same-origin');
 const {
+  serializeApiKey,
+  serializeApiKeyList,
+  serializeRotatedApiKey,
+} = require('../serializers/api-key.serializer');
+const {
   validateApiKeyIdentifierParam,
   validateCreateApiKeyInput,
   validateUpdateApiKeyInput,
 } = require('../validation/api-key.validation');
-
-function toApiKeyResponse(apiKey) {
-  if (!apiKey) return null;
-  const { id: _internalId, ...publicApiKey } = apiKey;
-  return publicApiKey;
-}
 
 function buildApiKeysRouter({ asyncHandler }) {
   const router = Router();
@@ -50,7 +49,7 @@ function buildApiKeysRouter({ asyncHandler }) {
       }
 
       const apiKeys = await listApiKeys();
-      return res.json({ apiKeys: apiKeys.map(toApiKeyResponse) });
+      return res.json({ apiKeys: serializeApiKeyList(apiKeys) });
     })
   );
 
@@ -96,7 +95,7 @@ function buildApiKeysRouter({ asyncHandler }) {
           message: 'API key not found.',
         });
       }
-      return res.json({ apiKey: toApiKeyResponse(apiKey) });
+      return res.json({ apiKey: serializeApiKey(apiKey) });
     })
   );
 
@@ -136,7 +135,7 @@ function buildApiKeysRouter({ asyncHandler }) {
       });
 
       return res.status(201).json({
-        apiKey: toApiKeyResponse(created.apiKey),
+        apiKey: serializeApiKey(created.apiKey),
         secret: created.secret,
       });
     })
@@ -181,7 +180,7 @@ function buildApiKeysRouter({ asyncHandler }) {
         },
       });
 
-      return res.json({ apiKey: toApiKeyResponse(revoked) });
+      return res.json({ apiKey: serializeApiKey(revoked) });
     })
   );
 
@@ -224,7 +223,7 @@ function buildApiKeysRouter({ asyncHandler }) {
         },
       });
 
-      return res.json({ apiKey: toApiKeyResponse(apiKey) });
+      return res.json({ apiKey: serializeApiKey(apiKey) });
     })
   );
 
@@ -267,11 +266,7 @@ function buildApiKeysRouter({ asyncHandler }) {
         },
       });
 
-      return res.json({
-        previousApiKeyId: rotated.previousApiKeyId,
-        apiKey: toApiKeyResponse(rotated.apiKey),
-        secret: rotated.secret,
-      });
+      return res.json(serializeRotatedApiKey(rotated));
     })
   );
 
@@ -316,7 +311,7 @@ function buildApiKeysRouter({ asyncHandler }) {
         },
       });
 
-      return res.json({ apiKey: toApiKeyResponse(apiKey) });
+      return res.json({ apiKey: serializeApiKey(apiKey) });
     })
   );
 

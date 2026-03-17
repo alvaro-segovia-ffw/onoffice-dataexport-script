@@ -11,6 +11,7 @@ const {
 const { PublicError } = require('../errors/public-error');
 const { requireConfiguredAuth } = require('../middlewares/require-configured-auth');
 const { requireAuth } = require('../middlewares/require-auth');
+const { serializeAuthSession } = require('../serializers/auth.serializer');
 const { validateLoginInput, validateRefreshTokenInput } = require('../validation/auth.validation');
 
 function buildAuthRouter({ asyncHandler, loginRateLimitMiddleware }) {
@@ -32,15 +33,7 @@ function buildAuthRouter({ asyncHandler, loginRateLimitMiddleware }) {
         });
       }
 
-      return res.json({
-        accessToken: session.accessToken,
-        tokenType: 'Bearer',
-        expiresIn: session.accessTokenTtl,
-        refreshToken: session.refreshToken,
-        refreshTokenExpiresAt: session.refreshTokenExpiresAt,
-        refreshTokenTtlDays: session.refreshTokenTtlDays,
-        user: session.user,
-      });
+      return res.json(serializeAuthSession(session));
     })
   );
 
@@ -59,15 +52,7 @@ function buildAuthRouter({ asyncHandler, loginRateLimitMiddleware }) {
         });
       }
 
-      return res.json({
-        accessToken: session.accessToken,
-        tokenType: 'Bearer',
-        expiresIn: session.accessTokenTtl,
-        refreshToken: session.refreshToken,
-        refreshTokenExpiresAt: session.refreshTokenExpiresAt,
-        refreshTokenTtlDays: session.refreshTokenTtlDays,
-        user: session.user,
-      });
+      return res.json(serializeAuthSession(session));
     })
   );
 
