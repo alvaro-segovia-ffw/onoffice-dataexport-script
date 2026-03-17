@@ -13,13 +13,17 @@ const {
   rotateApiKey,
   updateApiKey,
 } = require('../../../lib/api-key-service');
-const { isApiKeyScopeValidationError } = require('../../../lib/api-key-scopes');
 const { writeAuditLog } = require('../../../lib/audit-service');
 const { INTERNAL_PERMISSIONS } = require('../authz/internal-permissions');
 const { PublicError } = require('../errors/public-error');
 const { requireAdminOperator } = require('../middlewares/require-admin-operator');
 const { requireConfiguredAuth } = require('../middlewares/require-configured-auth');
 const { requirePermission } = require('../middlewares/require-permission');
+const {
+  validateApiKeyIdentifierParam,
+  validateCreateApiKeyInput,
+  validateUpdateApiKeyInput,
+} = require('../validation/api-key.validation');
 
 function toApiKeyResponse(apiKey) {
   if (!apiKey) return null;
@@ -82,7 +86,8 @@ function buildApiKeysRouter({ asyncHandler }) {
         });
       }
 
-      const apiKey = await findApiKeyByIdentifier(req.params.id);
+      const apiKeyId = validateApiKeyIdentifierParam(req.params);
+      const apiKey = await findApiKeyByIdentifier(apiKeyId);
       if (!apiKey) {
         throw new PublicError({
           statusCode: 404,
@@ -108,39 +113,11 @@ function buildApiKeysRouter({ asyncHandler }) {
         });
       }
 
-      const partnerId = String(req.body?.partnerId || '').trim();
-      const name = String(req.body?.name || '').trim();
-
-      if (!partnerId || !name) {
-        throw new PublicError({
-          statusCode: 400,
-          code: 'BAD_REQUEST',
-          message: 'partnerId and name are required.',
-        });
-      }
-
-      let created;
-      try {
-        created = await createApiKey({
-          ownerUserId: req.auth.sub,
-          partnerId,
-          name,
-          environment: req.body?.environment,
-          role: req.body?.role,
-          scopes: req.body?.scopes,
-          notes: req.body?.notes,
-          expiresAt: req.body?.expiresAt,
-        });
-      } catch (err) {
-        if (isApiKeyScopeValidationError(err)) {
-          throw new PublicError({
-            statusCode: 400,
-            code: 'INVALID_SCOPES',
-            message: 'Invalid API key scopes.',
-          });
-        }
-        throw err;
-      }
+      const validatedInput = validateCreateApiKeyInput(req.body);
+      const created = await createApiKey({
+        ownerUserId: req.auth.sub,
+        ...validatedInput,
+      });
 
       await writeAuditLog({
         actorUserId: req.auth.sub,
@@ -177,7 +154,8 @@ function buildApiKeysRouter({ asyncHandler }) {
         });
       }
 
-      const existing = await findApiKeyByIdentifier(req.params.id);
+      const apiKeyId = validateApiKeyIdentifierParam(req.params);
+      const existing = await findApiKeyByIdentifier(apiKeyId);
       if (!existing) {
         throw new PublicError({
           statusCode: 404,
@@ -186,7 +164,7 @@ function buildApiKeysRouter({ asyncHandler }) {
         });
       }
 
-      const revoked = await revokeApiKey(req.params.id);
+      const revoked = await revokeApiKey(apiKeyId);
       await writeAuditLog({
         actorUserId: req.auth.sub,
         action: 'api_key_revoked',
@@ -218,7 +196,8 @@ function buildApiKeysRouter({ asyncHandler }) {
         });
       }
 
-      const existing = await findApiKeyByIdentifier(req.params.id);
+      const apiKeyId = validateApiKeyIdentifierParam(req.params);
+      const existing = await findApiKeyByIdentifier(apiKeyId);
       if (!existing) {
         throw new PublicError({
           statusCode: 404,
@@ -227,7 +206,7 @@ function buildApiKeysRouter({ asyncHandler }) {
         });
       }
 
-      const apiKey = await reactivateApiKey(req.params.id);
+      const apiKey = await reactivateApiKey(apiKeyId);
       await writeAuditLog({
         actorUserId: req.auth.sub,
         action: 'api_key_reactivated',
@@ -259,7 +238,8 @@ function buildApiKeysRouter({ asyncHandler }) {
         });
       }
 
-      const rotated = await rotateApiKey(req.params.id);
+      const apiKeyId = validateApiKeyIdentifierParam(req.params);
+      const rotated = await rotateApiKey(apiKeyId);
       if (!rotated) {
         throw new PublicError({
           statusCode: 404,
@@ -304,7 +284,8 @@ function buildApiKeysRouter({ asyncHandler }) {
         });
       }
 
-      const existing = await findApiKeyByIdentifier(req.params.id);
+      const apiKeyId = validateApiKeyIdentifierParam(req.params);
+      const existing = await findApiKeyByIdentifier(apiKeyId);
       if (!existing) {
         throw new PublicError({
           statusCode: 404,
@@ -313,26 +294,8 @@ function buildApiKeysRouter({ asyncHandler }) {
         });
       }
 
-      let apiKey;
-      try {
-        apiKey = await updateApiKey(req.params.id, {
-          name: req.body?.name,
-          role: req.body?.role,
-          scopes: req.body?.scopes,
-          notes: req.body?.notes,
-          expiresAt: req.body?.expiresAt,
-          isActive: req.body?.isActive,
-        });
-      } catch (err) {
-        if (isApiKeyScopeValidationError(err)) {
-          throw new PublicError({
-            statusCode: 400,
-            code: 'INVALID_SCOPES',
-            message: 'Invalid API key scopes.',
-          });
-        }
-        throw err;
-      }
+      const validatedInput = validateUpdateApiKeyInput(req.body);
+      const apiKey = await updateApiKey(apiKeyId, validatedInput);
 
       await writeAuditLog({
         actorUserId: req.auth.sub,

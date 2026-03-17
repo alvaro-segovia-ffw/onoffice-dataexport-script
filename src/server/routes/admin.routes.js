@@ -11,6 +11,7 @@ const {
   requireAdminPageSession,
   userHasAdminConsoleAccess,
 } = require('../middlewares/require-admin-operator');
+const { validateLoginInput } = require('../validation/auth.validation');
 
 function buildAdminRouter({
   adminDir,
@@ -42,16 +43,7 @@ function buildAdminRouter({
     loginRateLimitMiddleware,
     requireConfiguredAuth,
     asyncHandler(async (req, res) => {
-      const email = String(req.body?.email || '').trim();
-      const password = String(req.body?.password || '');
-
-      if (!email || !password) {
-        throw new PublicError({
-          statusCode: 400,
-          code: 'BAD_REQUEST',
-          message: 'email and password are required.',
-        });
-      }
+      const { email, password } = validateLoginInput(req.body);
 
       const session = await loginWithPassword(email, password, { issueRefreshToken: false });
       if (!session) {

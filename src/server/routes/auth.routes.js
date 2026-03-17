@@ -11,6 +11,7 @@ const {
 const { PublicError } = require('../errors/public-error');
 const { requireConfiguredAuth } = require('../middlewares/require-configured-auth');
 const { requireAuth } = require('../middlewares/require-auth');
+const { validateLoginInput, validateRefreshTokenInput } = require('../validation/auth.validation');
 
 function buildAuthRouter({ asyncHandler, loginRateLimitMiddleware }) {
   const router = Router();
@@ -20,16 +21,7 @@ function buildAuthRouter({ asyncHandler, loginRateLimitMiddleware }) {
     loginRateLimitMiddleware,
     requireConfiguredAuth,
     asyncHandler(async (req, res) => {
-      const email = String(req.body?.email || '').trim();
-      const password = String(req.body?.password || '');
-
-      if (!email || !password) {
-        throw new PublicError({
-          statusCode: 400,
-          code: 'BAD_REQUEST',
-          message: 'email and password are required.',
-        });
-      }
+      const { email, password } = validateLoginInput(req.body);
 
       const session = await loginWithPassword(email, password);
       if (!session) {
@@ -56,14 +48,7 @@ function buildAuthRouter({ asyncHandler, loginRateLimitMiddleware }) {
     '/refresh',
     requireConfiguredAuth,
     asyncHandler(async (req, res) => {
-      const refreshToken = String(req.body?.refreshToken || '').trim();
-      if (!refreshToken) {
-        throw new PublicError({
-          statusCode: 400,
-          code: 'BAD_REQUEST',
-          message: 'refreshToken is required.',
-        });
-      }
+      const { refreshToken } = validateRefreshTokenInput(req.body);
 
       const session = await refreshUserSession(refreshToken);
       if (!session) {
@@ -90,14 +75,7 @@ function buildAuthRouter({ asyncHandler, loginRateLimitMiddleware }) {
     '/logout',
     requireConfiguredAuth,
     asyncHandler(async (req, res) => {
-      const refreshToken = String(req.body?.refreshToken || '').trim();
-      if (!refreshToken) {
-        throw new PublicError({
-          statusCode: 400,
-          code: 'BAD_REQUEST',
-          message: 'refreshToken is required.',
-        });
-      }
+      const { refreshToken } = validateRefreshTokenInput(req.body);
 
       await revokeRefreshToken(refreshToken);
       return res.status(204).end();
