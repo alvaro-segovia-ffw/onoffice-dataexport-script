@@ -3,37 +3,53 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { _test } = require('../lib/apartment-export');
+const { runApartmentExport } = require('../lib/apartment-export');
+const {
+  mapEstateToApartment,
+  mapEstateToGeocodeRecord,
+  normalizeDate,
+  parseBool,
+  parseNumber,
+  toSqFtFromSqm,
+} = require('../lib/apartments/apartment-mapper');
+const { buildPicturesMap, sortPhotos } = require('../lib/apartments/picture-utils');
+const { enrichApartmentsWithGeocodedCoordinates } = require('../lib/geocoding/geocoder-client');
+const {
+  chunk,
+  extractEstateRecords,
+  extractPicturesRecords,
+  getEstateLanguage,
+} = require('../lib/onoffice/onoffice-client');
 const geocoding = require('../lib/apartment-geocoding');
 
 test('parseBool supports german/english and numeric values', () => {
-  assert.equal(_test.parseBool('ja'), true);
-  assert.equal(_test.parseBool('yes'), true);
-  assert.equal(_test.parseBool('1'), true);
-  assert.equal(_test.parseBool('nein'), false);
-  assert.equal(_test.parseBool('no'), false);
-  assert.equal(_test.parseBool(0), false);
-  assert.equal(_test.parseBool('unknown'), null);
+  assert.equal(parseBool('ja'), true);
+  assert.equal(parseBool('yes'), true);
+  assert.equal(parseBool('1'), true);
+  assert.equal(parseBool('nein'), false);
+  assert.equal(parseBool('no'), false);
+  assert.equal(parseBool(0), false);
+  assert.equal(parseBool('unknown'), null);
 });
 
 test('parseNumber parses decimal comma and invalid values', () => {
-  assert.equal(_test.parseNumber('12,5'), 12.5);
-  assert.equal(_test.parseNumber('10.25'), 10.25);
-  assert.equal(_test.parseNumber(''), null);
-  assert.equal(_test.parseNumber(null), null);
-  assert.equal(_test.parseNumber('foo'), null);
+  assert.equal(parseNumber('12,5'), 12.5);
+  assert.equal(parseNumber('10.25'), 10.25);
+  assert.equal(parseNumber(''), null);
+  assert.equal(parseNumber(null), null);
+  assert.equal(parseNumber('foo'), null);
 });
 
 test('normalizeDate and toSqFtFromSqm normalize values', () => {
-  assert.equal(_test.normalizeDate('2026-03-06'), '2026-03-06');
-  assert.equal(_test.normalizeDate('0000-00-00'), null);
-  assert.equal(_test.normalizeDate(''), null);
-  assert.equal(_test.toSqFtFromSqm('10'), 107.64);
-  assert.equal(_test.toSqFtFromSqm('not-a-number'), null);
+  assert.equal(normalizeDate('2026-03-06'), '2026-03-06');
+  assert.equal(normalizeDate('0000-00-00'), null);
+  assert.equal(normalizeDate(''), null);
+  assert.equal(toSqFtFromSqm('10'), 107.64);
+  assert.equal(toSqFtFromSqm('not-a-number'), null);
 });
 
-test('mapEstateToExport maps key fields to output contract', () => {
-  const mapped = _test.mapEstateToExport({
+test('mapEstateToApartment maps key fields to output contract', () => {
+  const mapped = mapEstateToApartment({
     elements: {
       Id: 123,
       hausnummer: '5A',
@@ -73,7 +89,7 @@ test('mapEstateToExport maps key fields to output contract', () => {
 });
 
 test('mapEstateToGeocodeRecord extracts address and current coordinates', () => {
-  const mapped = _test.mapEstateToGeocodeRecord({
+  const mapped = mapEstateToGeocodeRecord({
     elements: {
       Id: 456,
       objektnr_extern: 'A-456',
@@ -123,7 +139,7 @@ test('enrichApartmentsWithGeocodedCoordinates keeps existing coordinates and fil
   ];
 
   const calls = [];
-  await _test.enrichApartmentsWithGeocodedCoordinates(apartments, {
+  await enrichApartmentsWithGeocodedCoordinates(apartments, {
     headers: { 'User-Agent': 'test-agent' },
     fetchImpl: async (url) => {
       calls.push(url);
@@ -158,7 +174,7 @@ test('enrichApartmentsWithGeocodedCoordinates skips geocoding when headers are m
     },
   ];
 
-  await _test.enrichApartmentsWithGeocodedCoordinates(apartments, {
+  await enrichApartmentsWithGeocodedCoordinates(apartments, {
     headers: null,
     fetchImpl: async () => {
       throw new Error('should not be called');
@@ -170,7 +186,7 @@ test('enrichApartmentsWithGeocodedCoordinates skips geocoding when headers are m
 });
 
 test('buildPicturesMap groups images by estate id', () => {
-  const picsMap = _test.buildPicturesMap([
+  const picsMap = buildPicturesMap([
     {
       elements: [
         { estateid: 1, url: 'https://a', type: 'Foto' },
@@ -194,7 +210,7 @@ test('sortPhotos prioritizes Titelbild then Foto then Grundriss and newest modif
     { type: 'Foto', modified: 20 },
   ];
 
-  photos.sort(_test.sortPhotos);
+  photos.sort(sortPhotos);
 
   assert.deepEqual(
     photos.map((x) => `${x.type}:${x.modified}`),
@@ -203,30 +219,65 @@ test('sortPhotos prioritizes Titelbild then Foto then Grundriss and newest modif
 });
 
 test('chunk and extract helpers keep expected behavior', () => {
-  assert.deepEqual(_test.chunk([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
-  assert.deepEqual(_test.extractEstateRecords({ data: { records: [1, 2] } }), [1, 2]);
-  assert.deepEqual(_test.extractEstateRecords({ data: {} }), []);
+  assert.deepEqual(chunk([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
+  assert.deepEqual(extractEstateRecords({ data: { records: [1, 2] } }), [1, 2]);
+  assert.deepEqual(extractEstateRecords({ data: {} }), []);
 
-  assert.deepEqual(_test.extractPicturesRecords({ data: { records: [9] } }), [9]);
-  assert.deepEqual(_test.extractPicturesRecords({ data: [8] }), [8]);
-  assert.deepEqual(_test.extractPicturesRecords({ records: [7] }), [7]);
-  assert.deepEqual(_test.extractPicturesRecords({ nope: true }), []);
+  assert.deepEqual(extractPicturesRecords({ data: { records: [9] } }), [9]);
+  assert.deepEqual(extractPicturesRecords({ data: [8] }), [8]);
+  assert.deepEqual(extractPicturesRecords({ records: [7] }), [7]);
+  assert.deepEqual(extractPicturesRecords({ nope: true }), []);
 });
 
 test('getEstateLanguage defaults to ENG and supports env override', () => {
   const previous = process.env.ONOFFICE_ESTATE_LANGUAGE;
 
   delete process.env.ONOFFICE_ESTATE_LANGUAGE;
-  assert.equal(_test.getEstateLanguage(), 'ENG');
+  assert.equal(getEstateLanguage(), 'ENG');
 
   process.env.ONOFFICE_ESTATE_LANGUAGE = 'DEU';
-  assert.equal(_test.getEstateLanguage(), 'DEU');
+  assert.equal(getEstateLanguage(), 'DEU');
 
   if (previous === undefined) {
     delete process.env.ONOFFICE_ESTATE_LANGUAGE;
   } else {
     process.env.ONOFFICE_ESTATE_LANGUAGE = previous;
   }
+});
+
+test('runApartmentExport orchestrates fetch and write through injectable dependencies', async () => {
+  const apartments = [{ id: '1' }, { id: '2' }];
+  let fetchCalls = 0;
+  let writeCalls = 0;
+
+  const result = await runApartmentExport({
+    filePrefix: 'custom-export',
+    outputDir: '/tmp/ignored',
+    fetchApartments: async (fetchOptions) => {
+      fetchCalls += 1;
+      assert.deepEqual(fetchOptions, {});
+      return apartments;
+    },
+    writeExportFile: async (payload, options) => {
+      writeCalls += 1;
+      assert.deepEqual(payload, apartments);
+      assert.equal(options.filePrefix, 'custom-export');
+      assert.equal(options.outputDir, '/tmp/ignored');
+      return {
+        outputFileName: 'custom-export_2026-03-17_12-00-00.json',
+        outputFilePath: '/tmp/ignored/custom-export_2026-03-17_12-00-00.json',
+      };
+    },
+  });
+
+  assert.equal(fetchCalls, 1);
+  assert.equal(writeCalls, 1);
+  assert.equal(result.apartments, 2);
+  assert.equal(result.outputFileName, 'custom-export_2026-03-17_12-00-00.json');
+  assert.equal(result.outputFilePath, '/tmp/ignored/custom-export_2026-03-17_12-00-00.json');
+  assert.match(result.startedAt, /^\d{4}-\d{2}-\d{2}T/);
+  assert.match(result.finishedAt, /^\d{4}-\d{2}-\d{2}T/);
+  assert.equal(Number.isInteger(result.durationMs), true);
 });
 
 test('geocoding helpers build provider params and CSV rows', () => {
