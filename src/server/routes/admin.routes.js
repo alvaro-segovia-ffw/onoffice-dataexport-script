@@ -3,13 +3,13 @@
 const path = require('path');
 const { Router } = require('express');
 
+const { userHasAdminConsoleAccess } = require('../../../lib/admin/admin-access');
 const { loginWithPassword } = require('../../../lib/auth-service');
 const { PublicError } = require('../errors/public-error');
 const { requireConfiguredAuth } = require('../middlewares/require-configured-auth');
 const {
   requireAdminOperator,
   requireAdminPageSession,
-  userHasAdminConsoleAccess,
 } = require('../middlewares/require-admin-operator');
 const { requireSameOrigin } = require('../middlewares/require-same-origin');
 const { validateLoginInput } = require('../validation/auth.validation');

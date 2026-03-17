@@ -1750,6 +1750,28 @@
         "minItems": 1,
         "uniqueItems": true
       },
+      "PartnerApartmentAccessPolicy": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "example": "rent.warmRent"
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": ["fields"]
+      },
+      "PartnerAccessPolicy": {
+        "type": "object",
+        "properties": {
+          "apartments": {
+            "$ref": "#/components/schemas/PartnerApartmentAccessPolicy"
+          }
+        }
+      },
       "ApiKey": {
         "type": "object",
         "properties": {
@@ -1787,6 +1809,9 @@
             "type": "string",
             "nullable": true
           },
+          "accessPolicy": {
+            "$ref": "#/components/schemas/PartnerAccessPolicy"
+          },
           "isActive": {
             "type": "boolean"
           },
@@ -1821,6 +1846,7 @@
           "role",
           "scopes",
           "notes",
+          "accessPolicy",
           "isActive",
           "lastUsedAt",
           "expiresAt",
@@ -1876,6 +1902,9 @@
             "type": "string",
             "nullable": true
           },
+          "accessPolicy": {
+            "$ref": "#/components/schemas/PartnerAccessPolicy"
+          },
           "expiresAt": {
             "type": "string",
             "nullable": true,
@@ -1901,6 +1930,9 @@
           "notes": {
             "type": "string",
             "nullable": true
+          },
+          "accessPolicy": {
+            "$ref": "#/components/schemas/PartnerAccessPolicy"
           },
           "expiresAt": {
             "type": "string",

@@ -30,6 +30,11 @@ test('validateCreateApiKeyInput normalizes a valid API key payload', () => {
     role: ' client ',
     scopes: ['apartments:read', 'apartments:read'],
     notes: ' internal note ',
+    accessPolicy: {
+      apartments: {
+        fields: ['id', 'rent.warmRent', 'id'],
+      },
+    },
     expiresAt: ' 2026-04-01T00:00:00.000Z ',
   });
 
@@ -40,6 +45,11 @@ test('validateCreateApiKeyInput normalizes a valid API key payload', () => {
     role: 'client',
     scopes: ['apartments:read'],
     notes: 'internal note',
+    accessPolicy: {
+      apartments: {
+        fields: ['id', 'rent.warmRent'],
+      },
+    },
     expiresAt: '2026-04-01T00:00:00.000Z',
   });
 });
@@ -68,6 +78,29 @@ test('validateCreateApiKeyInput rejects invalid scope payloads', () => {
       assertPublicError(err, {
         code: 'INVALID_SCOPES',
         message: 'Invalid API key scopes.',
+      });
+      return true;
+    }
+  );
+});
+
+test('validateCreateApiKeyInput rejects invalid access policy payloads', () => {
+  assert.throws(
+    () =>
+      validateCreateApiKeyInput({
+        partnerId: 'partner-a',
+        name: 'Partner A',
+        scopes: ['apartments:read'],
+        accessPolicy: {
+          apartments: {
+            fields: ['rent.*'],
+          },
+        },
+      }),
+    (err) => {
+      assertPublicError(err, {
+        code: 'INVALID_ACCESS_POLICY',
+        message: 'Unsupported accessPolicy.apartments.fields values: rent.*.',
       });
       return true;
     }
@@ -104,16 +137,29 @@ test('validateUpdateApiKeyInput rejects invalid field types', () => {
 
 test('validateUpdateApiKeyInput normalizes optional values', () => {
   const result = validateUpdateApiKeyInput({
+    name: ' Partner A updated ',
+    role: ' client ',
+    scopes: ['apartments:read'],
     notes: '   ',
+    accessPolicy: {
+      apartments: {
+        fields: ['id', 'address.city'],
+      },
+    },
     expiresAt: null,
     isActive: false,
   });
 
   assert.deepEqual(result, {
-    name: undefined,
-    role: undefined,
-    scopes: undefined,
+    name: 'Partner A updated',
+    role: 'client',
+    scopes: ['apartments:read'],
     notes: null,
+    accessPolicy: {
+      apartments: {
+        fields: ['id', 'address.city'],
+      },
+    },
     expiresAt: null,
     isActive: false,
   });

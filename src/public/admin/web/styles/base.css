@@ -1,0 +1,72 @@
+:root {
+  --admin-bg: #f3efe7;
+  --admin-ink: #1f1713;
+  --admin-muted: #5c524a;
+  --admin-line: rgba(111, 82, 53, 0.16);
+  --admin-panel: rgba(255, 250, 244, 0.82);
+  --admin-brand: #b7562b;
+  --admin-brand-dark: #873917;
+  --admin-ok: #22785d;
+  --admin-err: #b63f38;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body.admin-body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--admin-ink);
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(183, 86, 43, 0.18), transparent 28%),
+    radial-gradient(circle at 90% 10%, rgba(31, 77, 94, 0.14), transparent 26%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent 16%),
+    var(--admin-bg);
+}
+
+.brand-text strong,
+.sidebar-title,
+#viewTitle,
+h2,
+h3 {
+  font-family: "Cormorant Garamond", Georgia, serif;
+}
+
+.eyebrow,
+.card-kicker,
+.stat span,
+.access-row span {
+  margin: 0;
+  color: var(--admin-brand-dark);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.section-copy,
+.helper-copy,
+.session-summary,
+.form-label,
+th {
+  color: var(--admin-muted);
+}
+
+.section-copy,
+.helper-copy {
+  line-height: 1.7;
+}
+
+code {
+  font-family: "IBM Plex Sans", sans-serif;
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(31, 23, 19, 0.08);
+}
+
+pre code {
+  background: transparent;
+  padding: 0;
+}

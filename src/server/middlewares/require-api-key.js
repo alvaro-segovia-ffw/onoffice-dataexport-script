@@ -50,6 +50,7 @@ async function requireApiKey(req, res, next) {
       partnerId: result.apiKey.partnerId,
       scopes: result.apiKey.scopes,
       role: result.apiKey.role,
+      accessPolicy: result.apiKey.accessPolicy,
     };
 
     await recordApiKeyUsed(req, result.apiKey);

@@ -65,208 +65,358 @@
 
     <main class="pb-5">
       <section class="container-xxl">
-        <div class="admin-hero rounded-5 overflow-hidden">
-          <div class="row g-0">
-            <div class="col-xl-7">
-              <div class="hero-copy p-4 p-md-5">
-                <p class="eyebrow">Internal console</p>
-                <h1 class="display-3 hero-title mb-3">Operate credentials, audits and session state from one dashboard.</h1>
-                <p class="lede mb-4">
-                  This console is for internal operators only. It centralizes API-key lifecycle
-                  management, partner audit visibility and operational health checks behind a role-based session.
+        <div class="admin-shell">
+          <aside class="admin-sidebar">
+            <div class="surface-card sidebar-card">
+              <p class="card-kicker">Operator Console</p>
+              <h1 class="sidebar-title mb-3">Admin Menu</h1>
+              <p class="section-copy mb-4">
+                Move between operational areas without wading through one long dashboard.
+              </p>
+
+              <nav class="console-nav" aria-label="Admin sections">
+                <button type="button" class="console-nav-link active" data-view-target="overview">
+                  <span class="console-nav-label">Overview</span>
+                  <span class="console-nav-meta">Session and telemetry</span>
+                </button>
+                <button type="button" class="console-nav-link" data-view-target="provisioning">
+                  <span class="console-nav-label">Create Key</span>
+                  <span class="console-nav-meta">Provision partner access</span>
+                </button>
+                <button type="button" class="console-nav-link" data-view-target="keys">
+                  <span class="console-nav-label">Manage Keys</span>
+                  <span class="console-nav-meta">Rotate, revoke, reactivate</span>
+                </button>
+                <button type="button" class="console-nav-link" data-view-target="audit">
+                  <span class="console-nav-label">Audit Logs</span>
+                  <span class="console-nav-meta">Inspect usage and failures</span>
+                </button>
+              </nav>
+
+              <div class="sidebar-links">
+                <a href="/docs" class="btn btn-outline-admin">Internal Docs</a>
+                <a href="/docs/public" class="btn btn-outline-admin">Partner Docs</a>
+              </div>
+            </div>
+          </aside>
+
+          <section class="admin-main">
+            <div class="admin-topline surface-card">
+              <div class="topline-copy">
+                <p class="eyebrow mb-2">Internal console</p>
+                <h2 id="viewTitle" class="mb-2">Overview</h2>
+                <p id="viewDescription" class="section-copy mb-0">
+                  Session state, API key telemetry and quick operational refresh.
                 </p>
-                <div class="d-flex flex-wrap gap-3">
-                  <button id="btnLoad" type="button" class="btn btn-admin btn-lg">Refresh Dashboard</button>
-                  <a href="/docs" class="btn btn-outline-admin btn-lg" target="_blank" rel="noreferrer">
-                    Internal Docs
-                  </a>
-                  <a href="/docs/public" class="btn btn-outline-admin btn-lg" target="_blank" rel="noreferrer">
-                    Partner Docs
-                  </a>
-                </div>
+              </div>
+              <div class="topline-actions">
+                <span id="loginStatus" class="status badge rounded-pill">idle</span>
+                <button id="btnLoad" type="button" class="btn btn-admin">Refresh Data</button>
               </div>
             </div>
-            <div class="col-xl-5">
-              <aside class="hero-side p-4 p-md-5 h-100">
-                <div class="surface-panel h-100">
-                  <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
-                    <div>
-                      <p class="eyebrow mb-2">Session state</p>
-                      <h2 class="mb-0">Access control</h2>
+
+            <section class="console-view active" data-view="overview">
+              <div class="row g-4">
+                <div class="col-xl-5">
+                  <article class="surface-card h-100">
+                    <div class="panel-head">
+                      <div>
+                        <p class="card-kicker">Session</p>
+                        <h3 class="mb-0">Operator Access</h3>
+                      </div>
                     </div>
-                    <span id="loginStatus" class="status badge rounded-pill">idle</span>
+                    <div class="session-stack mt-4">
+                      <div class="session-strip">
+                        <span class="eyebrow">Current user</span>
+                        <p id="sessionSummary" class="session-summary mb-0">No active session.</p>
+                      </div>
+                      <div class="access-row">
+                        <span>Console rule</span>
+                        <strong>Only <code>admin</code> or <code>developer</code> users may operate this console.</strong>
+                      </div>
+                      <div class="access-row">
+                        <span>Session behavior</span>
+                        <strong>Invalid or stale sessions are cleared and redirected back to <code>/admin/login</code>.</strong>
+                      </div>
+                    </div>
+                  </article>
+                </div>
+                <div class="col-xl-7">
+                  <article class="surface-card h-100">
+                    <div class="panel-head">
+                      <div>
+                        <p class="card-kicker">Telemetry</p>
+                        <h3 class="mb-0">API Key Stats</h3>
+                      </div>
+                      <span id="statsStatus" class="status badge rounded-pill">idle</span>
+                    </div>
+                    <div id="statsGrid" class="stats-grid mt-4">
+                      <div class="stat"><span>Total</span><strong>-</strong></div>
+                      <div class="stat"><span>Active</span><strong>-</strong></div>
+                      <div class="stat"><span>Revoked</span><strong>-</strong></div>
+                      <div class="stat"><span>Expired</span><strong>-</strong></div>
+                      <div class="stat"><span>Used 24h</span><strong>-</strong></div>
+                      <div class="stat"><span>Auth Failed 24h</span><strong>-</strong></div>
+                    </div>
+                  </article>
+                </div>
+              </div>
+            </section>
+
+            <section class="console-view" data-view="provisioning" hidden>
+              <article class="surface-card">
+                <div class="panel-head">
+                  <div>
+                    <p class="card-kicker">Provisioning</p>
+                    <h3 class="mb-0">Create Partner Key</h3>
                   </div>
-                  <p id="sessionSummary" class="session-summary mb-3">No active session.</p>
-                  <p class="helper-copy mb-0">
-                    Without a valid <code>admin</code> or <code>developer</code> session you will be
-                    redirected to <code>/admin/login</code>.
-                  </p>
+                  <span id="createStatus" class="status badge rounded-pill">idle</span>
                 </div>
-              </aside>
-            </div>
-          </div>
-        </div>
-      </section>
+                <p class="section-copy mt-3 mb-0">
+                  Create a live partner key with the minimum data needed to start integrating.
+                </p>
+                <div class="create-step-shell mt-4">
+                  <div class="create-step-indicators">
+                    <button type="button" class="create-step-indicator active" data-create-step-indicator>1</button>
+                    <button type="button" class="create-step-indicator" data-create-step-indicator>2</button>
+                  </div>
+                  <div class="create-step-copy">
+                    <p id="createStepTitle" class="card-kicker mb-2">Step 1 · Identity</p>
+                    <p id="createStepDescription" class="helper-copy mb-0">
+                      Define the partner label and the stable identifier used across keys and logs.
+                    </p>
+                  </div>
+                </div>
+                <form id="createForm" class="row g-4 mt-1 create-key-form">
+                  <div class="col-12" data-create-step>
+                    <div class="create-form-block">
+                      <p class="card-kicker mb-3">Identity</p>
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label class="form-label">
+                            Key Name
+                            <input
+                              id="createName"
+                              name="name"
+                              type="text"
+                              class="form-control"
+                              placeholder="Idealista Main Feed"
+                              required
+                            />
+                          </label>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label">
+                            Partner ID
+                            <input
+                              id="createPartnerId"
+                              name="partnerId"
+                              type="text"
+                              class="form-control"
+                              placeholder="idealista"
+                              required
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-12" data-create-step hidden>
+                    <div class="create-form-block">
+                      <p class="card-kicker mb-3">Access</p>
+                      <div class="row g-3">
+                        <div class="col-12 create-scope-row">
+                          <div class="scope-select-card">
+                            <label class="form-label mb-2">
+                              Scope
+                              <select id="createScope" name="scopes" class="form-select scope-select">
+                                <option value="apartments:read">apartments:read</option>
+                              </select>
+                            </label>
+                            <p class="helper-copy mb-0">Current partner access starts with apartment read access.</p>
+                          </div>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label">
+                            Notes
+                            <textarea
+                              name="notes"
+                              class="form-control"
+                              rows="4"
+                              placeholder="Optional internal notes"
+                            ></textarea>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-12 d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div class="create-form-note">
+                      <span class="card-kicker">Defaults</span>
+                      <p class="helper-copy mb-0">New partner keys are created as live client keys.</p>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                      <button id="btnCreateBack" type="button" class="btn btn-outline-admin" hidden>Back</button>
+                      <button id="btnCreateNext" type="button" class="btn btn-outline-admin">Next</button>
+                      <button id="btnCreateSubmit" type="submit" class="btn btn-admin" hidden>Create Key</button>
+                    </div>
+                  </div>
+                </form>
+                <pre id="createOutput" class="console-output mt-4">No key created yet.</pre>
+              </article>
+            </section>
 
-      <section class="container-xxl mt-4">
-        <div class="row g-4">
-          <div class="col-xl-4">
-            <article class="surface-card h-100">
-              <div class="panel-head">
-                <div>
-                  <p class="card-kicker">Telemetry</p>
-                  <h2 class="mb-0">API Key Stats</h2>
+            <section class="console-view" data-view="keys" hidden>
+              <div class="row g-4">
+                <div class="col-xl-7">
+                  <article class="surface-card h-100">
+                    <div class="panel-head">
+                      <div>
+                        <p class="card-kicker">Inventory</p>
+                        <h3 class="mb-0">Key Directory</h3>
+                      </div>
+                      <div class="d-flex align-items-center gap-2">
+                        <span id="keysStatus" class="status badge rounded-pill">idle</span>
+                        <button id="btnRefreshKeys" type="button" class="btn btn-outline-admin btn-sm">Refresh</button>
+                      </div>
+                    </div>
+                    <p class="section-copy mt-3 mb-0">
+                      Select one key to inspect metadata and run actions from the detail panel.
+                    </p>
+                    <div class="table-responsive mt-4">
+                      <table class="table table-hover align-middle admin-table mb-0">
+                        <thead>
+                          <tr>
+                            <th>Partner</th>
+                            <th>Name</th>
+                            <th>Prefix</th>
+                            <th>Status</th>
+                            <th>Last Used</th>
+                          </tr>
+                        </thead>
+                        <tbody id="keysTable">
+                          <tr><td colspan="5" class="empty">No data loaded.</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </article>
                 </div>
-                <span id="statsStatus" class="status badge rounded-pill">idle</span>
+                <div class="col-xl-5">
+                  <article class="surface-card h-100">
+                    <div class="panel-head">
+                      <div>
+                        <p class="card-kicker">Selection</p>
+                        <h3 class="mb-0">Key Detail</h3>
+                      </div>
+                    </div>
+                    <div id="keyDetailCard" class="key-detail-card mt-4">
+                      <p class="empty mb-0">Select an API key from the directory.</p>
+                    </div>
+                    <form id="keyDetailForm" class="row g-3 mt-4" hidden>
+                      <div class="col-12">
+                        <label class="form-label">
+                          Key Name
+                          <input id="keyDetailName" name="name" type="text" class="form-control" />
+                        </label>
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label">
+                          Scopes
+                          <input id="keyDetailScopes" name="scopes" type="text" class="form-control" />
+                        </label>
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label">
+                          Notes
+                          <textarea id="keyDetailNotes" name="notes" class="form-control" rows="3"></textarea>
+                        </label>
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label">
+                          Expires At
+                          <input id="keyDetailExpiresAt" name="expiresAt" type="datetime-local" class="form-control" />
+                        </label>
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label">
+                          Apartment Access Fields
+                          <input
+                            id="keyDetailAccessFields"
+                            name="accessFields"
+                            type="text"
+                            class="form-control"
+                            placeholder="id, address.city, rent.warmRent"
+                          />
+                        </label>
+                        <p class="helper-copy mt-2 mb-0">Comma-separated allowlist for apartment projection. Leave empty for full payload.</p>
+                      </div>
+                      <div class="col-12 d-flex flex-wrap justify-content-between align-items-center gap-3">
+                        <span id="keyDetailStatus" class="status badge rounded-pill">idle</span>
+                        <button type="submit" class="btn btn-admin">Save Changes</button>
+                      </div>
+                    </form>
+                    <div id="keyDetailActions" class="row-actions row-actions-detail mt-4" hidden></div>
+                    <pre id="keyActionOutput" class="console-output mt-4">No actions run yet.</pre>
+                  </article>
+                </div>
               </div>
-              <div id="statsGrid" class="stats-grid mt-4">
-                <div class="stat"><span>Total</span><strong>-</strong></div>
-                <div class="stat"><span>Active</span><strong>-</strong></div>
-                <div class="stat"><span>Revoked</span><strong>-</strong></div>
-                <div class="stat"><span>Expired</span><strong>-</strong></div>
-                <div class="stat"><span>Used 24h</span><strong>-</strong></div>
-                <div class="stat"><span>Auth Failed 24h</span><strong>-</strong></div>
-              </div>
-            </article>
-          </div>
-          <div class="col-xl-8">
-            <article class="surface-card h-100">
-              <div class="panel-head">
-                <div>
-                  <p class="card-kicker">Provisioning</p>
-                  <h2 class="mb-0">Create API Key</h2>
-                </div>
-                <span id="createStatus" class="status badge rounded-pill">idle</span>
-              </div>
-              <form id="createForm" class="row g-3 mt-1">
-                <div class="col-md-6">
-                  <label class="form-label">
-                    Partner ID
-                    <input name="partnerId" type="text" class="form-control" placeholder="partner-roombae" required />
-                  </label>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">
-                    Name
-                    <input name="name" type="text" class="form-control" placeholder="Roombae Production" required />
-                  </label>
-                </div>
-                <div class="col-md-6 col-lg-3">
-                  <label class="form-label">
-                    Environment
-                    <select name="environment" class="form-select">
-                      <option value="live">live</option>
-                      <option value="test">test</option>
-                    </select>
-                  </label>
-                </div>
-                <div class="col-md-6 col-lg-3">
-                  <label class="form-label">
-                    Role
-                    <select name="role" class="form-select">
-                      <option value="client">client</option>
-                      <option value="developer">developer</option>
-                      <option value="admin">admin</option>
-                    </select>
-                  </label>
-                </div>
-                <div class="col-lg-6">
-                  <label class="form-label">
-                    Scopes
-                    <input name="scopes" type="text" class="form-control" value="apartments:read" />
-                  </label>
-                </div>
-                <div class="col-12">
-                  <label class="form-label">
-                    Notes
-                    <input name="notes" type="text" class="form-control" placeholder="Optional notes" />
-                  </label>
-                </div>
-                <div class="col-12 d-flex flex-wrap gap-3">
-                  <button type="submit" class="btn btn-admin">Create Key</button>
-                </div>
-              </form>
-              <pre id="createOutput" class="console-output mt-4">No key created yet.</pre>
-            </article>
-          </div>
-        </div>
-      </section>
+            </section>
 
-      <section class="container-xxl mt-4">
-        <div class="row g-4">
-          <div class="col-12 col-xxl-8">
-            <article class="surface-card h-100">
-              <div class="panel-head">
-                <div>
-                  <p class="card-kicker">Inventory</p>
-                  <h2 class="mb-0">API Keys</h2>
+            <section class="console-view" data-view="audit" hidden>
+              <div class="row g-4">
+                <div class="col-xl-4">
+                  <article class="surface-card h-100">
+                    <div class="panel-head">
+                      <div>
+                        <p class="card-kicker">Traceability</p>
+                        <h3 class="mb-0">Audit Filters</h3>
+                      </div>
+                      <span id="auditStatus" class="status badge rounded-pill">idle</span>
+                    </div>
+                    <form id="auditForm" class="row g-3 mt-1">
+                      <div class="col-12">
+                        <label class="form-label">
+                          Partner ID
+                          <input name="partnerId" type="text" class="form-control" placeholder="roombae" />
+                        </label>
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label">
+                          Action
+                          <input name="action" type="text" class="form-control" placeholder="api_key_used" />
+                        </label>
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label">
+                          Limit
+                          <input name="limit" type="number" class="form-control" min="1" max="200" value="20" />
+                        </label>
+                      </div>
+                      <div class="col-12 d-flex flex-wrap gap-3">
+                        <button type="submit" class="btn btn-admin">Load Logs</button>
+                      </div>
+                    </form>
+                  </article>
                 </div>
-                <div class="d-flex align-items-center gap-2">
-                  <span id="keysStatus" class="status badge rounded-pill">idle</span>
-                  <button id="btnRefreshKeys" type="button" class="btn btn-outline-admin btn-sm">Refresh</button>
+                <div class="col-xl-8">
+                  <article class="surface-card h-100">
+                    <div class="panel-head">
+                      <div>
+                        <p class="card-kicker">Event stream</p>
+                        <h3 class="mb-0">Audit Output</h3>
+                      </div>
+                    </div>
+                    <pre id="auditOutput" class="console-output console-output-tall mt-4">No logs loaded yet.</pre>
+                  </article>
                 </div>
               </div>
-              <div class="table-responsive mt-4">
-                <table class="table table-hover align-middle admin-table mb-0">
-                  <thead>
-                    <tr>
-                      <th>Partner</th>
-                      <th>Name</th>
-                      <th>Prefix</th>
-                      <th>Status</th>
-                      <th>Last Used</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody id="keysTable">
-                    <tr><td colspan="6" class="empty">No data loaded.</td></tr>
-                  </tbody>
-                </table>
-              </div>
-              <pre id="keyActionOutput" class="console-output mt-4">No actions run yet.</pre>
-            </article>
-          </div>
-          <div class="col-12 col-xxl-4">
-            <article class="surface-card h-100">
-              <div class="panel-head">
-                <div>
-                  <p class="card-kicker">Traceability</p>
-                  <h2 class="mb-0">Audit Logs</h2>
-                </div>
-                <span id="auditStatus" class="status badge rounded-pill">idle</span>
-              </div>
-              <form id="auditForm" class="row g-3 mt-1">
-                <div class="col-md-6 col-xxl-12">
-                  <label class="form-label">
-                    Partner ID
-                    <input name="partnerId" type="text" class="form-control" placeholder="roombae" />
-                  </label>
-                </div>
-                <div class="col-md-6 col-xxl-12">
-                  <label class="form-label">
-                    Action
-                    <input name="action" type="text" class="form-control" placeholder="api_key_used" />
-                  </label>
-                </div>
-                <div class="col-md-6 col-xxl-12">
-                  <label class="form-label">
-                    Limit
-                    <input name="limit" type="number" class="form-control" min="1" max="200" value="20" />
-                  </label>
-                </div>
-                <div class="col-12 d-flex flex-wrap gap-3">
-                  <button type="submit" class="btn btn-admin">Load Logs</button>
-                </div>
-              </form>
-              <pre id="auditOutput" class="console-output mt-4">No logs loaded.</pre>
-            </article>
-          </div>
+            </section>
+          </section>
         </div>
       </section>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/site/nav-session.js"></script>
-    <script src="/admin/app.js"></script>
+    <script src="/site/nav-session.js" defer></script>
+    <script type="module" src="/admin/app.js"></script>
   </body>
 </html>

@@ -1,19 +1,14 @@
 'use strict';
 
+const { userHasAdminConsoleAccess } = require('../../../lib/admin/admin-access');
 const { getUserProfile, isAuthConfigured } = require('../../../lib/auth-service');
 const { getCookie, serializeCookie } = require('../../../lib/cookies');
 const { verifyAccessToken } = require('../../../lib/jwt');
 const { PublicError } = require('../errors/public-error');
 const { extractBearerToken } = require('./require-auth');
 
-const allowedRoles = new Set(['admin', 'developer']);
 const adminCookieName = 'hope_admin_session';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
-
-function userHasAdminConsoleAccess(user) {
-  const roles = Array.isArray(user?.roles) ? user.roles : [];
-  return roles.some((role) => allowedRoles.has(role));
-}
 
 function extractAdminToken(req, options = {}) {
   const { allowCookie = true } = options;

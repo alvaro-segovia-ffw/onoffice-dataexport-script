@@ -3,6 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
+const { userHasAdminConsoleAccess } = require('../lib/admin/admin-access');
 const { hashPassword, verifyPassword } = require('../lib/password');
 const { getJwtConfig, signAccessToken, verifyAccessToken } = require('../lib/jwt');
 const {
@@ -45,6 +46,12 @@ test('jwt helpers sign and verify access tokens', () => {
   } else {
     process.env.JWT_ACCESS_TTL = previousTtl;
   }
+});
+
+test('userHasAdminConsoleAccess allows admin and developer roles only', () => {
+  assert.equal(userHasAdminConsoleAccess({ roles: ['admin'] }), true);
+  assert.equal(userHasAdminConsoleAccess({ roles: ['developer'] }), true);
+  assert.equal(userHasAdminConsoleAccess({ roles: ['client'] }), false);
 });
 
 test('refresh token helpers generate hashable tokens and support ttl override', () => {

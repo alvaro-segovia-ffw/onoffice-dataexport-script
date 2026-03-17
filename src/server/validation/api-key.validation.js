@@ -1,6 +1,7 @@
 'use strict';
 
 const { validateApiKeyScopes, isApiKeyScopeValidationError } = require('../../../lib/api-key-scopes');
+const { validatePartnerAccessPolicy } = require('./access-policy.validation');
 const {
   badRequest,
   ensureBodyObject,
@@ -53,6 +54,7 @@ function validateCreateApiKeyInput(body) {
       allowNull: true,
       emptyToNull: true,
     }),
+    accessPolicy: validatePartnerAccessPolicy(input.accessPolicy),
     expiresAt: normalizeOptionalString(input.expiresAt, {
       fieldName: 'expiresAt',
       allowNull: true,
@@ -78,6 +80,7 @@ function validateUpdateApiKeyInput(body) {
       allowNull: true,
       emptyToNull: true,
     }),
+    accessPolicy: validatePartnerAccessPolicy(input.accessPolicy),
     expiresAt: normalizeOptionalString(input.expiresAt, {
       fieldName: 'expiresAt',
       allowNull: true,

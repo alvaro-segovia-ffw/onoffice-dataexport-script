@@ -71,6 +71,11 @@ test('mapApiKeyRow normalizes database fields to API contract', () => {
     role: 'client',
     scopes: ['apartments:read'],
     notes: 'note',
+    access_policy: {
+      apartments: {
+        fields: ['id', 'rent.warmRent'],
+      },
+    },
     is_active: true,
     last_used_at: '2026-03-12T10:00:00.000Z',
     expires_at: null,
@@ -83,6 +88,11 @@ test('mapApiKeyRow normalizes database fields to API contract', () => {
   assert.equal(mapped.keyPrefix, 'hop_live_abc123def456');
   assert.equal(mapped.role, 'client');
   assert.deepEqual(mapped.scopes, ['apartments:read']);
+  assert.deepEqual(mapped.accessPolicy, {
+    apartments: {
+      fields: ['id', 'rent.warmRent'],
+    },
+  });
 });
 
 test('supported API key scopes are centrally defined', () => {

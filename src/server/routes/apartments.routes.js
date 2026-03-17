@@ -2,8 +2,8 @@
 
 const { Router } = require('express');
 
-const { fetchApartmentsLive } = require('../../../lib/apartment-export');
 const { API_KEY_SCOPES } = require('../../../lib/api-key-scopes');
+const { listPartnerApartmentsLive } = require('../../../lib/apartments/partner-apartment-service');
 const { PublicError } = require('../errors/public-error');
 const { requireApiKey } = require('../middlewares/require-api-key');
 const { requireApiKeyScope } = require('../middlewares/require-api-key-scope');
@@ -29,16 +29,16 @@ function buildApartmentsRouter({ asyncHandler, liveSyncState, rateLimitMiddlewar
       const startedAt = new Date();
 
       try {
-        const apartments = await fetchApartmentsLive();
+        const result = await listPartnerApartmentsLive(req.authActor);
         const finishedAt = new Date();
 
-        res.setHeader('x-data-source', 'live-onoffice');
+        res.setHeader('x-data-source', result.dataSource);
         return res.json({
-          apartments,
+          apartments: result.apartments,
           meta: {
             requestedBy: req.authActor.partnerId,
             authType: req.authActor.type,
-            count: apartments.length,
+            count: result.apartments.length,
             startedAt: startedAt.toISOString(),
             finishedAt: finishedAt.toISOString(),
             durationMs: finishedAt.getTime() - startedAt.getTime(),
