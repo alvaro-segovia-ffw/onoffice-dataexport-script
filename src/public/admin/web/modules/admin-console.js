@@ -44,7 +44,46 @@ function bindEvents() {
   bindViewNavigation();
 }
 
+function copyWithSelectionFallback(value) {
+  const helper = document.createElement('textarea');
+  helper.value = value;
+  helper.setAttribute('readonly', 'readonly');
+  helper.setAttribute('aria-hidden', 'true');
+  helper.style.position = 'fixed';
+  helper.style.top = '0';
+  helper.style.left = '0';
+  helper.style.width = '1px';
+  helper.style.height = '1px';
+  helper.style.padding = '0';
+  helper.style.border = '0';
+  helper.style.opacity = '0';
+  helper.style.pointerEvents = 'none';
+  helper.style.zIndex = '-1';
+  document.body.appendChild(helper);
+
+  helper.focus();
+  helper.select();
+  helper.setSelectionRange(0, helper.value.length);
+
+  let copied = false;
+  try {
+    copied = document.execCommand('copy');
+  } catch (_err) {
+    copied = false;
+  }
+
+  document.body.removeChild(helper);
+  return copied;
+}
+
 async function handleCopyValueClick(event) {
+  const openKeyButton = event.target.closest('button[data-open-created-key]');
+  if (openKeyButton) {
+    setActiveView('keys');
+    els.keyDetailCard?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+
   const button = event.target.closest('button[data-copy-value]');
   if (!button) return;
 
@@ -52,7 +91,11 @@ async function handleCopyValueClick(event) {
   if (!value) return;
 
   try {
-    await navigator.clipboard.writeText(value);
+    if (navigator.clipboard?.writeText && window.isSecureContext) {
+      await navigator.clipboard.writeText(value);
+    } else if (!copyWithSelectionFallback(value)) {
+      throw new Error('copy failed');
+    }
     button.textContent = 'Copied';
     window.setTimeout(() => {
       button.textContent = String(button.dataset.copyLabel || 'Copy Secret');

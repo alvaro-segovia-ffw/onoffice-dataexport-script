@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Lato:wght@300;700&family=Playfair+Display:wght@700&display=swap"
       rel="stylesheet"
     />
     <link
@@ -20,7 +20,7 @@
   <body class="admin-body">
     <header class="admin-header py-3 py-lg-4">
       <div class="container-xxl">
-        <nav class="navbar navbar-expand-lg admin-navbar rounded-4 px-3 px-lg-4 py-3" data-bs-theme="dark">
+        <nav class="navbar navbar-expand-lg admin-navbar rounded-4 px-3 px-lg-4 py-3" data-bs-theme="light">
           <a class="navbar-brand brand-lockup me-0" href="/">
             <span class="brand-logo-shell">
               <img class="brand-logo" src="/site/imgs/hope-logo.png" alt="Hope Apartments logo" />
@@ -48,11 +48,11 @@
               <a class="nav-link" href="/health">Health</a>
             </div>
             <div class="nav-session d-flex flex-column flex-lg-row gap-2 align-items-lg-center" data-nav-session>
-              <span class="nav-user badge rounded-pill text-bg-light" data-nav-user hidden></span>
-              <a class="btn btn-outline-light nav-action" data-nav-dashboard href="/admin/dashboard" hidden>
+              <span class="nav-user" data-nav-user hidden></span>
+              <a class="btn btn-outline-admin nav-action" data-nav-dashboard href="/admin/dashboard" hidden>
                 Dashboard
               </a>
-              <button class="btn btn-outline-light nav-action" data-nav-logout type="button" hidden>
+              <button class="btn btn-outline-admin nav-action" data-nav-logout type="button" hidden>
                 Logout
               </button>
               <a class="btn btn-admin nav-action" data-nav-login href="/admin/login">Admin Login</a>

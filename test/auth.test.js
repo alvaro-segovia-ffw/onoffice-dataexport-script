@@ -4,14 +4,14 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const { userHasAdminConsoleAccess } = require('../lib/admin/admin-access');
-const { hashPassword, verifyPassword } = require('../lib/password');
-const { getJwtConfig, signAccessToken, verifyAccessToken } = require('../lib/jwt');
+const { hashPassword, verifyPassword } = require('../lib/auth/password');
+const { getJwtConfig, signAccessToken, verifyAccessToken } = require('../lib/auth/jwt');
 const {
   buildRefreshTokenExpiry,
   generateRefreshToken,
   getRefreshTokenConfig,
   hashRefreshToken,
-} = require('../lib/refresh-token');
+} = require('../lib/auth/refresh-token');
 
 test('password helpers hash and verify passwords', async () => {
   const hash = await hashPassword('S3cret!');

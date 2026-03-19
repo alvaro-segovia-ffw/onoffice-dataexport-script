@@ -6,9 +6,9 @@
     statusValue: document.getElementById('statusValue'),
     statusMessage: document.getElementById('statusMessage'),
     uptimeValue: document.getElementById('uptimeValue'),
-    authValue: document.getElementById('authValue'),
     serverTimeValue: document.getElementById('serverTimeValue'),
     checkedAtValue: document.getElementById('checkedAtValue'),
+    refreshHealthButton: document.getElementById('refreshHealthButton'),
   };
 
   function setStatusAppearance(ok, label) {
@@ -41,6 +41,10 @@
   async function loadHealth() {
     setStatusAppearance(null, 'Checking…');
     els.statusMessage.textContent = 'Loading current health payload.';
+    if (els.refreshHealthButton) {
+      els.refreshHealthButton.disabled = true;
+      els.refreshHealthButton.textContent = 'Refreshing...';
+    }
 
     try {
       const res = await fetch('/health.json', {
@@ -59,7 +63,6 @@
         ? 'The API responded normally to the health probe.'
         : 'The API reported a non-healthy status.';
       els.uptimeValue.textContent = formatUptime(payload.uptimeSec);
-      els.authValue.textContent = payload.authEnabled ? 'Enabled' : 'Disabled';
       els.serverTimeValue.textContent = formatDate(payload.now);
       els.checkedAtValue.textContent = formatDate(new Date().toISOString());
     } catch (err) {
@@ -67,10 +70,18 @@
       els.statusValue.textContent = 'error';
       els.statusMessage.textContent = err.message || 'Failed to load health payload.';
       els.uptimeValue.textContent = '-';
-      els.authValue.textContent = '-';
       els.serverTimeValue.textContent = '-';
       els.checkedAtValue.textContent = formatDate(new Date().toISOString());
+    } finally {
+      if (els.refreshHealthButton) {
+        els.refreshHealthButton.disabled = false;
+        els.refreshHealthButton.textContent = 'Refresh Status';
+      }
     }
+  }
+
+  if (els.refreshHealthButton) {
+    els.refreshHealthButton.addEventListener('click', loadHealth);
   }
 
   loadHealth();

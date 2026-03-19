@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { runApartmentExport } = require('../lib/apartment-export');
+const { runApartmentExport } = require('../lib/export/apartment-export-service');
 const {
   mapEstateToApartment,
   mapEstateToGeocodeRecord,
@@ -18,9 +18,12 @@ const {
   chunk,
   extractEstateRecords,
   extractPicturesRecords,
+  fetchEstates,
+  fetchOnSaleEstates,
+  fetchRentalEstates,
   getEstateLanguage,
 } = require('../lib/onoffice/onoffice-client');
-const geocoding = require('../lib/apartment-geocoding');
+const geocoding = require('../lib/geocoding/apartment-geocoding');
 
 test('parseBool supports german/english and numeric values', () => {
   assert.equal(parseBool('ja'), true);
@@ -227,6 +230,84 @@ test('chunk and extract helpers keep expected behavior', () => {
   assert.deepEqual(extractPicturesRecords({ data: [8] }), [8]);
   assert.deepEqual(extractPicturesRecords({ records: [7] }), [7]);
   assert.deepEqual(extractPicturesRecords({ nope: true }), []);
+});
+
+test('fetchEstates no longer hardcodes the rental filter', async () => {
+  let capturedBody = null;
+
+  await fetchEstates(
+    { apiUrl: 'https://example.test/api', token: 'token', secret: 'secret' },
+    {
+      fetchImpl: async (_url, request) => {
+        capturedBody = JSON.parse(request.body);
+        return {
+          ok: true,
+          async json() {
+            return {
+              status: { code: 200 },
+              response: { results: [{ data: { records: [] } }] },
+            };
+          },
+        };
+      },
+    }
+  );
+
+  const filter = capturedBody.request.actions[0].parameters.filter;
+  assert.equal(filter.nutzungsart, undefined);
+  assert.deepEqual(filter.status, [{ op: '=', val: '1' }]);
+  assert.deepEqual(filter.veroeffentlichen, [{ op: '=', val: '1' }]);
+});
+
+test('fetchRentalEstates applies the rental onOffice filter', async () => {
+  let capturedBody = null;
+
+  await fetchRentalEstates(
+    { apiUrl: 'https://example.test/api', token: 'token', secret: 'secret' },
+    {
+      fetchImpl: async (_url, request) => {
+        capturedBody = JSON.parse(request.body);
+        return {
+          ok: true,
+          async json() {
+            return {
+              status: { code: 200 },
+              response: { results: [{ data: { records: [] } }] },
+            };
+          },
+        };
+      },
+    }
+  );
+
+  const filter = capturedBody.request.actions[0].parameters.filter;
+  assert.deepEqual(filter.nutzungsart, [{ op: '=', val: 'waz' }]);
+});
+
+test('fetchOnSaleEstates applies the onsale onOffice filter', async () => {
+  let capturedBody = null;
+
+  await fetchOnSaleEstates(
+    { apiUrl: 'https://example.test/api', token: 'token', secret: 'secret' },
+    {
+      fetchImpl: async (_url, request) => {
+        capturedBody = JSON.parse(request.body);
+        return {
+          ok: true,
+          async json() {
+            return {
+              status: { code: 200 },
+              response: { results: [{ data: { records: [] } }] },
+            };
+          },
+        };
+      },
+    }
+  );
+
+  const filter = capturedBody.request.actions[0].parameters.filter;
+  assert.deepEqual(filter.veroeffentlichen, [{ op: '=', val: '1' }]);
+  assert.deepEqual(filter.exclusive, [{ op: '=', val: '1' }]);
 });
 
 test('getEstateLanguage defaults to ENG and supports env override', () => {

@@ -1,7 +1,7 @@
 'use strict';
 
-const { parseApiKey } = require('../../../lib/api-key');
-const { writeAuditLog } = require('../../../lib/audit-service');
+const { parseApiKey } = require('../../../lib/api-keys/api-key');
+const { writeAuditLog } = require('../../../lib/audit/audit-service');
 
 function getRequestMetadata(req) {
   return {

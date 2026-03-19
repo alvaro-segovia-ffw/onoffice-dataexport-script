@@ -11,7 +11,7 @@
 ## Request Validation
 
 - Verify API keys with constant-time comparison against stored hashes.
-- Enable rate limiting for `/apartments` to reduce brute-force attempts.
+- Enable rate limiting for `/api/v1/apartments` to reduce brute-force attempts.
 - Avoid logging raw API keys.
 
 ## Access Control
@@ -19,7 +19,7 @@
 - API keys are your partner allow-list.
 - Remove inactive or revoked partner keys promptly.
 - Keep partner IDs descriptive (`partner-a`, `partner-b`, etc.).
-- Enable rate limiting for `/apartments` to reduce brute-force and abuse.
+- Enable rate limiting for `/api/v1/apartments` to reduce brute-force and abuse.
 - Public docs are always reachable for partners.
 - Internal docs stay protected by authentication and role checks.
 

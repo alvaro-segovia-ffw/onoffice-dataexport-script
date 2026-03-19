@@ -51,10 +51,50 @@ function normalizePartnerId(value) {
     .replace(/^-|-$/g, '');
 }
 
+function normalizeAuditPartnerId(log) {
+  return String(log?.metadata?.partnerId || log?.metadata?.requestedBy || '').trim();
+}
+
+function isExpiredApiKey(apiKey) {
+  return Boolean(apiKey?.expiresAt && new Date(apiKey.expiresAt).getTime() <= Date.now());
+}
+
+function getActivePartnerIds() {
+  return Array.from(
+    new Set(
+      getApiKeys()
+        .filter((apiKey) => Boolean(apiKey?.isActive) && !isExpiredApiKey(apiKey))
+        .map((apiKey) => String(apiKey?.partnerId || '').trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+function applyAuditPartnerFilter(logs, partnerFilter) {
+  const selectedFilter = String(partnerFilter || '__active__').trim() || '__active__';
+  if (selectedFilter === '__history__') return Array.isArray(logs) ? logs : [];
+
+  if (selectedFilter && !selectedFilter.startsWith('__')) {
+    return (Array.isArray(logs) ? logs : []).filter((log) => normalizeAuditPartnerId(log) === selectedFilter);
+  }
+
+  const activePartnerIds = new Set(getActivePartnerIds());
+  if (!activePartnerIds.size) return [];
+
+  return (Array.isArray(logs) ? logs : []).filter((log) => activePartnerIds.has(normalizeAuditPartnerId(log)));
+}
+
 function parseCommaSeparatedList(value) {
   return String(value || '')
     .split(/[\n,]/)
     .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function getSelectedValues(select) {
+  if (!select) return [];
+  return Array.from(select.selectedOptions || [])
+    .map((option) => String(option.value || '').trim())
     .filter(Boolean);
 }
 
@@ -131,15 +171,20 @@ export async function loadApiKeys() {
 export async function loadAuditLogs(filters = {}) {
   setStatus(els.auditStatus, 'loading...', null);
   try {
+    const selectedPartnerFilter =
+      filters.partnerId === undefined ? String(els.auditPartnerFilter?.value || '__active__') : String(filters.partnerId || '');
     const query = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
+      if (key === 'partnerId' && (value === '__active__' || value === '__history__')) {
+        return;
+      }
       if (value !== undefined && value !== null && String(value).trim()) {
         query.set(key, String(value).trim());
       }
     });
     const suffix = query.toString() ? `?${query.toString()}` : '';
     const payload = await apiFetch(`/audit-logs${suffix}`);
-    renderAuditLogs(payload.logs || []);
+    renderAuditLogs(applyAuditPartnerFilter(payload.logs || [], selectedPartnerFilter));
     setStatus(els.auditStatus, 'loaded', true);
   } catch (err) {
     setStatus(els.auditStatus, 'error', false);
@@ -149,7 +194,8 @@ export async function loadAuditLogs(filters = {}) {
 }
 
 export async function loadDashboard() {
-  await Promise.all([loadStats(), loadApiKeys(), loadAuditLogs({ limit: 20 })]);
+  await Promise.all([loadStats(), loadApiKeys()]);
+  await loadAuditLogs({ limit: 20, partnerId: '__active__' });
 }
 
 export async function createApiKey(event) {
@@ -165,7 +211,7 @@ export async function createApiKey(event) {
     partnerId: normalizedPartnerId,
     name: String(form.get('name') || '').trim(),
     role: 'client',
-    scopes: [String(form.get('scopes') || '').trim()].filter(Boolean),
+    scopes: getSelectedValues(els.createScope),
     notes: form.get('notes') || null,
   };
 
@@ -181,7 +227,8 @@ export async function createApiKey(event) {
     els.createPartnerId.value = '';
     els.createName.value = '';
     resetCreatePartnerIdAutofill();
-    await Promise.all([loadApiKeys(), loadStats(), loadAuditLogs({ limit: 20 })]);
+    await Promise.all([loadApiKeys(), loadStats()]);
+    await loadAuditLogs({ limit: 20, partnerId: '__active__' });
   } catch (err) {
     setStatus(els.createStatus, 'error', false);
     renderCreateResult({ error: err.message });
@@ -221,7 +268,8 @@ export async function handleKeyAction(event) {
     } else if (payload?.apiKey?.publicId) {
       setSelectedApiKeyId(payload.apiKey.publicId);
     }
-    await Promise.all([loadApiKeys(), loadStats(), loadAuditLogs({ limit: 20 })]);
+    await Promise.all([loadApiKeys(), loadStats()]);
+    await loadAuditLogs({ limit: 20, partnerId: '__active__' });
   } catch (err) {
     renderKeyActionResult({ action, error: err.message });
     handleAuthError(err);
@@ -237,7 +285,7 @@ export async function handleKeyDetailSubmit(event) {
 
   const payload = {
     name: String(els.keyDetailName.value || '').trim(),
-    scopes: [String(els.keyDetailScopes.value || '').trim()].filter(Boolean),
+    scopes: getSelectedValues(els.keyDetailScopes),
     notes: String(els.keyDetailNotes.value || '').trim() || null,
     expiresAt: localDateTimeValueToIso(els.keyDetailExpiresAt.value),
     accessPolicy: buildAccessPolicyFromFields(els.keyDetailAccessFields.value),
@@ -251,7 +299,8 @@ export async function handleKeyDetailSubmit(event) {
     setStatus(els.keyDetailStatus, 'saved', true);
     renderKeyActionResult({ action: 'update', payload: result });
     setSelectedApiKeyId(result.apiKey?.publicId || selectedApiKey.publicId);
-    await Promise.all([loadApiKeys(), loadStats(), loadAuditLogs({ limit: 20 })]);
+    await Promise.all([loadApiKeys(), loadStats()]);
+    await loadAuditLogs({ limit: 20, partnerId: '__active__' });
   } catch (err) {
     setStatus(els.keyDetailStatus, 'error', false);
     renderKeyActionResult({ action: 'update', error: err.message });

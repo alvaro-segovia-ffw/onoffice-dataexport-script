@@ -1,6 +1,6 @@
 'use strict';
 
-const { verifyAccessToken } = require('../../../lib/jwt');
+const { verifyAccessToken } = require('../../../lib/auth/jwt');
 const { PublicError } = require('../errors/public-error');
 
 function extractBearerToken(req) {

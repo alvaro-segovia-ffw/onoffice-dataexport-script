@@ -1,7 +1,7 @@
 'use strict';
 
-const { isApiKeyServiceConfigured } = require('../../../lib/api-key-service');
-const { isAuthConfigured } = require('../../../lib/auth-service');
+const { isApiKeyServiceConfigured } = require('../../../lib/api-keys/api-key-service');
+const { isAuthConfigured } = require('../../../lib/auth/auth-service');
 const { PublicError } = require('../errors/public-error');
 
 function buildConfiguredServiceMiddleware(isConfigured, errorConfig) {

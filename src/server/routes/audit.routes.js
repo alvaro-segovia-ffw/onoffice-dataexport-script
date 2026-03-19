@@ -2,7 +2,7 @@
 
 const { Router } = require('express');
 
-const { listAuditLogs } = require('../../../lib/audit-service');
+const { listAuditLogs } = require('../../../lib/audit/audit-service');
 const { INTERNAL_PERMISSIONS } = require('../authz/internal-permissions');
 const { requireAdminOperator } = require('../middlewares/require-admin-operator');
 const { requireConfiguredAuth } = require('../middlewares/require-configured-auth');

@@ -10,10 +10,14 @@ const {
   hashApiKey,
   normalizeApiKeyEnvironment,
   parseApiKey,
-} = require('../lib/api-key');
-const { API_KEY_SCOPES, SUPPORTED_API_KEY_SCOPES, isApiKeyScopeValidationError } = require('../lib/api-key-scopes');
-const { mapApiKeyRow } = require('../lib/mappers/api-key-mapper');
-const { createApiKey, isApiKeyUsable, updateApiKey } = require('../lib/api-key-service');
+} = require('../lib/api-keys/api-key');
+const {
+  API_KEY_SCOPES,
+  SUPPORTED_API_KEY_SCOPES,
+  isApiKeyScopeValidationError,
+} = require('../lib/api-keys/api-key-scopes');
+const { mapApiKeyRow } = require('../lib/api-keys/api-key-mapper');
+const { createApiKey, isApiKeyUsable, updateApiKey } = require('../lib/api-keys/api-key-service');
 
 test('generateApiKey creates parseable live key by default', () => {
   const generated = generateApiKey();
@@ -96,7 +100,11 @@ test('mapApiKeyRow normalizes database fields to API contract', () => {
 });
 
 test('supported API key scopes are centrally defined', () => {
-  assert.deepEqual(SUPPORTED_API_KEY_SCOPES, [API_KEY_SCOPES.APARTMENTS_READ]);
+  assert.deepEqual(SUPPORTED_API_KEY_SCOPES, [
+    API_KEY_SCOPES.APARTMENTS_READ,
+    API_KEY_SCOPES.APARTMENTS_RENTAL_READ,
+    API_KEY_SCOPES.APARTMENTS_SALE_READ,
+  ]);
 });
 
 test('createApiKey requires explicit valid scopes', async () => {

@@ -4,7 +4,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { PublicError } = require('./errors/public-error');
-const { isAuthConfigured } = require('../../lib/auth-service');
+const { isAuthConfigured } = require('../../lib/auth/auth-service');
 const { serializeCookie } = require('../../lib/cookies');
 const { loadAppEnv } = require('../../lib/load-dotenv');
 const { errorHandler } = require('./middlewares/error-handler');
@@ -12,7 +12,7 @@ const { notFoundHandler } = require('./middlewares/not-found-handler');
 const { adminCookieName } = require('./middlewares/require-admin-operator');
 const { createInMemoryRateLimit } = require('./middlewares/request-rate-limit');
 const { buildAdminRouter } = require('./routes/admin.routes');
-const { buildApartmentsRouter } = require('./routes/apartments.routes');
+const { buildApiV1Router } = require('./routes/api-v1.routes');
 const { buildApiKeysRouter } = require('./routes/api-keys.routes');
 const { buildAuditRouter } = require('./routes/audit.routes');
 const { buildAuthRouter } = require('./routes/auth.routes');
@@ -23,6 +23,7 @@ loadAppEnv(process.cwd());
 
 const PORT = Number(process.env.PORT || process.env.EXPORT_API_PORT || 3000);
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const API_V1_BASE_PATH = '/api/v1';
 
 const liveSyncState = { isRunning: false };
 
@@ -113,7 +114,6 @@ function buildHealthPayload() {
     status: 'ok',
     uptimeSec: Math.floor(process.uptime()),
     now: new Date().toISOString(),
-    authEnabled: AUTH_ENABLED,
   };
 }
 
@@ -233,8 +233,8 @@ app.use(
   })
 );
 app.use(
-  '/apartments',
-  buildApartmentsRouter({
+  API_V1_BASE_PATH,
+  buildApiV1Router({
     asyncHandler,
     liveSyncState,
     rateLimitMiddleware,

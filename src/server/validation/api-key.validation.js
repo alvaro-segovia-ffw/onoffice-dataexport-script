@@ -1,6 +1,6 @@
 'use strict';
 
-const { validateApiKeyScopes, isApiKeyScopeValidationError } = require('../../../lib/api-key-scopes');
+const { validateApiKeyScopes, isApiKeyScopeValidationError } = require('../../../lib/api-keys/api-key-scopes');
 const { validatePartnerAccessPolicy } = require('./access-policy.validation');
 const {
   badRequest,

@@ -2,12 +2,11 @@
   "name": "hope-apartments-api",
   "version": "1.0.0",
   "description": "Hope Apartments API for live onOffice apartment exports",
-  "main": "export-apartments.js",
   "scripts": {
-    "start": "node api-server.js",
-    "export": "node export-apartments.js",
+    "start": "node src/server/app.js",
+    "export": "node scripts/export-apartments.js",
     "geocode:apartments": "node scripts/geocode-apartments.js",
-    "api": "node api-server.js",
+    "api": "node src/server/app.js",
     "test": "node --test"
   },
   "keywords": [],

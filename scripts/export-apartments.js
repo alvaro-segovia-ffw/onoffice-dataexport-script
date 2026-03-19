@@ -2,7 +2,7 @@
 
 const path = require('path');
 const { loadAppEnv } = require('../lib/load-dotenv');
-const { runApartmentExport } = require('../lib/apartment-export');
+const { runApartmentExport } = require('../lib/export/apartment-export-service');
 
 loadAppEnv(process.cwd());
 

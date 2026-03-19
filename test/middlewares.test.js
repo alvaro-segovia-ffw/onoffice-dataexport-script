@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { API_KEY_SCOPES } = require('../lib/api-key-scopes');
+const { API_KEY_SCOPES } = require('../lib/api-keys/api-key-scopes');
 const { parseCookieHeader } = require('../lib/cookies');
 const {
   DEVELOPER_INTERNAL_PERMISSION_SET,
@@ -18,7 +18,7 @@ const {
   extractAdminToken,
   requireAdminOperator,
 } = require('../src/server/middlewares/require-admin-operator');
-const { DOCS_REQUIRED_PERMISSION } = require('../middlewares/docs-access');
+const { DOCS_REQUIRED_PERMISSION } = require('../src/server/middlewares/docs-access');
 const {
   requireConfiguredApiKeyService,
   requireConfiguredAuditService,
@@ -31,7 +31,7 @@ const {
   requireSameOrigin,
   requireSameOriginForCookieAuth,
 } = require('../src/server/middlewares/require-same-origin');
-const { requireRole } = require('../middlewares/require-role');
+const { requireRole } = require('../src/server/middlewares/require-role');
 const { requireApiKeyScope } = require('../src/server/middlewares/require-api-key-scope');
 const { createInMemoryRateLimit } = require('../src/server/middlewares/request-rate-limit');
 
@@ -552,6 +552,68 @@ test('requireApiKeyScope rejects a valid key without the required scope and reco
   assert.equal(auditEntries[0].action, 'api_key_scope_denied');
   assert.equal(auditEntries[0].metadata.requiredScope, API_KEY_SCOPES.APARTMENTS_READ);
   assert.equal(auditEntries[0].metadata.enforced, true);
+});
+
+test('requireApiKeyScope allows a valid key with any accepted apartment subtype scope', async () => {
+  const middleware = requireApiKeyScope(
+    [API_KEY_SCOPES.APARTMENTS_READ, API_KEY_SCOPES.APARTMENTS_RENTAL_READ],
+    {
+      match: 'any',
+      auditLogWriter: async () => {
+        throw new Error('audit should not be called');
+      },
+    }
+  );
+
+  const req = createApiKeyScopeRequest([API_KEY_SCOPES.APARTMENTS_RENTAL_READ]);
+  const res = createResponseDouble();
+  let nextCalled = false;
+
+  await middleware(req, res, (err) => {
+    assert.equal(err, undefined);
+    nextCalled = true;
+  });
+
+  assert.equal(nextCalled, true);
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.payload, null);
+});
+
+test('requireApiKeyScope rejects when none of the accepted apartment subtype scopes are present', async () => {
+  const auditEntries = [];
+  const middleware = requireApiKeyScope(
+    [API_KEY_SCOPES.APARTMENTS_READ, API_KEY_SCOPES.APARTMENTS_SALE_READ],
+    {
+      match: 'any',
+      auditRequiredScope: 'apartments:read|apartments:sale:read',
+      auditLogWriter: async (entry) => {
+        auditEntries.push(entry);
+      },
+    }
+  );
+
+  const req = createApiKeyScopeRequest([API_KEY_SCOPES.APARTMENTS_RENTAL_READ]);
+  const res = createResponseDouble();
+  let forwardedError = null;
+
+  await middleware(req, res, (err) => {
+    forwardedError = err;
+  });
+
+  assert.equal(forwardedError instanceof PublicError, true);
+
+  runErrorHandler(forwardedError, req, res);
+
+  assert.equal(res.statusCode, 403);
+  assert.equal(res.payload.status, 'error');
+  assert.equal(res.payload.code, 'FORBIDDEN');
+  assert.equal(
+    res.payload.message,
+    `Missing required API key scope: ${API_KEY_SCOPES.APARTMENTS_READ} or ${API_KEY_SCOPES.APARTMENTS_SALE_READ}.`
+  );
+  assert.equal(auditEntries.length, 1);
+  assert.equal(auditEntries[0].metadata.requiredScope, 'apartments:read|apartments:sale:read');
+  assert.deepEqual(auditEntries[0].metadata.scopes, [API_KEY_SCOPES.APARTMENTS_RENTAL_READ]);
 });
 
 test('requireAdminOperator clears invalid admin session cookie for stale cookie auth', async () => {

@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Lato:wght@300;700&family=Playfair+Display:wght@700&display=swap"
       rel="stylesheet"
     />
     <link
@@ -20,7 +20,7 @@
   <body class="admin-body">
     <header class="admin-header py-3 py-lg-4">
       <div class="container-xxl">
-        <nav class="navbar navbar-expand-lg admin-navbar rounded-4 px-3 px-lg-4 py-3" data-bs-theme="dark">
+        <nav class="navbar navbar-expand-lg admin-navbar rounded-4 px-3 px-lg-4 py-3" data-bs-theme="light">
           <a class="navbar-brand brand-lockup me-0" href="/">
             <span class="brand-logo-shell">
               <img class="brand-logo" src="/site/imgs/hope-logo.png" alt="Hope Apartments logo" />
@@ -49,11 +49,11 @@
               <a class="nav-link" href="/health">Health</a>
             </div>
             <div class="nav-session d-flex flex-column flex-lg-row gap-2 align-items-lg-center" data-nav-session>
-              <span class="nav-user badge rounded-pill text-bg-light" data-nav-user hidden></span>
-              <a class="btn btn-outline-light nav-action" data-nav-dashboard href="/admin/dashboard" hidden>
+              <span class="nav-user" data-nav-user hidden></span>
+              <a class="btn btn-outline-admin nav-action" data-nav-dashboard href="/admin/dashboard" hidden>
                 Dashboard
               </a>
-              <button class="btn btn-outline-light nav-action" data-nav-logout type="button" hidden>
+              <button class="btn btn-outline-admin nav-action" data-nav-logout type="button" hidden>
                 Logout
               </button>
               <a class="btn btn-admin nav-action" data-nav-login href="/admin/login">Admin Login</a>
@@ -219,15 +219,18 @@
                             <div class="create-inline-head">
                               <div>
                                 <p class="card-kicker mb-2">Access</p>
-                                <p class="helper-copy mb-0">Current partner access starts with apartment read access.</p>
+                                <p class="helper-copy mb-0">Assign the broad apartment feed or limit the key to rental and on-sale exports only.</p>
                               </div>
                               <label class="form-label mb-0">
-                                Scope
-                                <select id="createScope" name="scopes" class="form-select scope-select">
-                                  <option value="apartments:read">apartments:read</option>
+                                Scopes
+                                <select id="createScope" name="scopes" class="form-select scope-select" multiple size="3">
+                                  <option value="apartments:read" selected>apartments:read</option>
+                                  <option value="apartments:rental:read">apartments:rental:read</option>
+                                  <option value="apartments:sale:read">apartments:sale:read</option>
                                 </select>
                               </label>
                             </div>
+                            <p class="helper-copy mt-3 mb-0">Use Command/Ctrl-click to select multiple scopes. `apartments:read` already covers rental and on-sale feeds.</p>
                           </div>
                         </div>
                         <div class="col-12">
@@ -355,11 +358,13 @@
                       <div class="col-lg-5">
                         <label class="form-label mb-0">
                           Scopes
-                          <select id="keyDetailScopes" name="scopes" class="form-select">
+                          <select id="keyDetailScopes" name="scopes" class="form-select scope-select" multiple size="3">
                             <option value="apartments:read">apartments:read</option>
+                            <option value="apartments:rental:read">apartments:rental:read</option>
+                            <option value="apartments:sale:read">apartments:sale:read</option>
                           </select>
                         </label>
-                        <p class="helper-copy mt-2 mb-0">Available scopes are limited to the supported partner permissions.</p>
+                        <p class="helper-copy mt-2 mb-0">Use Command/Ctrl-click to assign one or more supported apartment read scopes.</p>
                       </div>
                       <div class="col-12">
                         <label class="form-label">
@@ -487,7 +492,8 @@
                           <label class="form-label">
                             Partner ID
                             <select id="auditPartnerFilter" name="partnerId" class="form-select">
-                              <option value="">All partners</option>
+                              <option value="__active__">Active partners</option>
+                              <option value="__history__">Full history</option>
                             </select>
                           </label>
                         </div>

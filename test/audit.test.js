@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { listAuditLogs, writeAuditLog } = require('../lib/audit-service');
+const { listAuditLogs, writeAuditLog } = require('../lib/audit/audit-service');
 
 test('writeAuditLog returns null when database is not configured', async () => {
   const previousDatabaseUrl = process.env.DATABASE_URL;

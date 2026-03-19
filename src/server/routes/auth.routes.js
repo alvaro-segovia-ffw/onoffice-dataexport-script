@@ -7,7 +7,7 @@ const {
   getUserProfile,
   refreshUserSession,
   revokeRefreshToken,
-} = require('../../../lib/auth-service');
+} = require('../../../lib/auth/auth-service');
 const { PublicError } = require('../errors/public-error');
 const { requireConfiguredAuth } = require('../middlewares/require-configured-auth');
 const { requireAuth } = require('../middlewares/require-auth');

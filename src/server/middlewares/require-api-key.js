@@ -1,6 +1,6 @@
 'use strict';
 
-const { verifyApiKey, isApiKeyServiceConfigured } = require('../../../lib/api-key-service');
+const { verifyApiKey, isApiKeyServiceConfigured } = require('../../../lib/api-keys/api-key-service');
 const { recordApiKeyAuthFailed, recordApiKeyUsed } = require('../audit/audit-recorder');
 const { PublicError } = require('../errors/public-error');
 

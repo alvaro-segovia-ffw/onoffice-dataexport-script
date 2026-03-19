@@ -8,13 +8,33 @@
     <style>
       html, body { margin: 0; padding: 0; }
       #swagger-ui { max-width: 1200px; margin: 0 auto; }
+      .docs-session-note {
+        max-width: 1200px;
+        margin: 16px auto 0;
+        padding: 12px 16px;
+        border: 1px solid rgba(183, 86, 43, 0.18);
+        border-radius: 12px;
+        background: rgba(255, 248, 241, 0.92);
+        color: #432f20;
+        font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
       #swagger-ui .scheme-container .servers,
       #swagger-ui .scheme-container .servers-title {
         display: none;
       }
+      #swagger-ui .auth-wrapper,
+      #swagger-ui .authorization__btn,
+      #swagger-ui .opblock-summary-control .authorization__btn {
+        display: none !important;
+      }
     </style>
   </head>
   <body>
+    <div class="docs-session-note">
+      Internal Swagger uses the current admin browser session automatically for internal endpoints.
+      For the apartments endpoints, provide the partner token directly in the
+      <code>X-API-Key</code> header field shown inside each operation.
+    </div>
     <div id="swagger-ui"></div>
     <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
     <script>
@@ -24,6 +44,10 @@
         deepLinking: true,
         presets: [SwaggerUIBundle.presets.apis],
         defaultModelsExpandDepth: 1,
+        requestInterceptor: (request) => {
+          request.credentials = 'include';
+          return request;
+        },
       });
     </script>
   </body>

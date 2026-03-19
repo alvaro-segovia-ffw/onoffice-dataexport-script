@@ -1,13 +1,21 @@
 :root {
-  --admin-bg: #f3efe7;
-  --admin-ink: #1f1713;
-  --admin-muted: #5c524a;
-  --admin-line: rgba(111, 82, 53, 0.16);
-  --admin-panel: rgba(255, 250, 244, 0.82);
-  --admin-brand: #b7562b;
-  --admin-brand-dark: #873917;
-  --admin-ok: #22785d;
-  --admin-err: #b63f38;
+  --admin-bg: #f7f5fb;
+  --admin-panel: rgba(255, 255, 255, 0.92);
+  --admin-panel-strong: #ffffff;
+  --admin-ink: #241d35;
+  --admin-muted: #666176;
+  --admin-soft: #8a8597;
+  --admin-line: rgba(68, 46, 119, 0.12);
+  --admin-line-strong: rgba(196, 164, 69, 0.34);
+  --admin-brand: #442e77;
+  --admin-brand-dark: #35225d;
+  --admin-accent: #c4a445;
+  --admin-accent-dark: #997d29;
+  --admin-neutral: #c4c4c4;
+  --admin-ok: #3d7e66;
+  --admin-err: #a64f66;
+  --admin-shadow-soft: 0 18px 44px rgba(42, 27, 77, 0.08);
+  --admin-shadow-card: 0 28px 64px rgba(42, 27, 77, 0.1);
 }
 
 * {
@@ -18,20 +26,26 @@ body.admin-body {
   margin: 0;
   min-height: 100vh;
   color: var(--admin-ink);
-  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  font-family: "Lato", "Segoe UI", sans-serif;
+  font-weight: 300;
+  line-height: 1.75;
   background:
-    radial-gradient(circle at top left, rgba(183, 86, 43, 0.18), transparent 28%),
-    radial-gradient(circle at 90% 10%, rgba(31, 77, 94, 0.14), transparent 26%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent 16%),
+    radial-gradient(circle at top left, rgba(68, 46, 119, 0.16), transparent 30%),
+    radial-gradient(circle at 88% 10%, rgba(196, 164, 69, 0.16), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(247, 245, 251, 0.96)),
     var(--admin-bg);
 }
 
 .brand-text strong,
 .sidebar-title,
 #viewTitle,
+h1,
 h2,
 h3 {
-  font-family: "Cormorant Garamond", Georgia, serif;
+  font-family: "Playfair Display", Georgia, serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--admin-brand);
 }
 
 .eyebrow,
@@ -39,10 +53,11 @@ h3 {
 .stat span,
 .access-row span {
   margin: 0;
-  color: var(--admin-brand-dark);
+  color: var(--admin-accent-dark);
   font-size: 0.75rem;
+  font-family: "Lato", "Segoe UI", sans-serif;
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
 }
 
@@ -50,20 +65,39 @@ h3 {
 .helper-copy,
 .session-summary,
 .form-label,
-th {
+th,
+.console-nav-meta,
+.key-listing-meta,
+.empty {
   color: var(--admin-muted);
 }
 
 .section-copy,
 .helper-copy {
-  line-height: 1.7;
+  line-height: 1.8;
+}
+
+a {
+  color: var(--admin-brand);
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+a:hover {
+  color: var(--admin-brand-dark);
 }
 
 code {
-  font-family: "IBM Plex Sans", sans-serif;
-  padding: 0.12rem 0.4rem;
+  font-family: "Lato", "Segoe UI", sans-serif;
+  font-weight: 700;
+  padding: 0.14rem 0.42rem;
   border-radius: 999px;
-  background: rgba(31, 23, 19, 0.08);
+  background: rgba(68, 46, 119, 0.08);
+  color: var(--admin-brand);
 }
 
 pre code {

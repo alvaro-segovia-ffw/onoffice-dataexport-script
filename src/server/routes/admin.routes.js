@@ -4,7 +4,7 @@ const path = require('path');
 const { Router } = require('express');
 
 const { userHasAdminConsoleAccess } = require('../../../lib/admin/admin-access');
-const { loginWithPassword } = require('../../../lib/auth-service');
+const { loginWithPassword } = require('../../../lib/auth/auth-service');
 const { PublicError } = require('../errors/public-error');
 const { requireConfiguredAuth } = require('../middlewares/require-configured-auth');
 const {

@@ -8,21 +8,22 @@
   "tags": [
     {
       "name": "Apartments",
-      "description": "Partner apartment export endpoint"
+      "description": "Partner apartment export endpoints"
     }
   ],
   "paths": {
-    "/apartments": {
+    "/api/v1/apartments": {
       "get": {
-        "tags": ["Apartments"],
-        "summary": "Fetch live apartment data",
-        "description": "Returns normalized apartments from onOffice. Requires a valid `X-API-Key` with the `apartments:read` scope.",
+        "tags": [
+          "Apartments"
+        ],
+        "summary": "Fetch all live apartments",
+        "description": "Returns the full apartment collection available to the authenticated partner.",
         "security": [
           {
             "partnerApiKey": []
           }
         ],
-        "x-required-scopes": ["apartments:read"],
         "responses": {
           "200": {
             "description": "Normalized apartment payload",
@@ -69,7 +70,7 @@
             }
           },
           "403": {
-            "description": "Valid API key without the required `apartments:read` scope",
+            "description": "Authenticated but not authorized for this endpoint",
             "content": {
               "application/json": {
                 "schema": {
@@ -127,6 +128,336 @@
           }
         }
       }
+    },
+    "/api/v1/apartments/rental": {
+      "get": {
+        "tags": [
+          "Apartments"
+        ],
+        "summary": "Fetch live rental apartments",
+        "description": "Returns only rental apartments available to the authenticated partner.",
+        "security": [
+          {
+            "partnerApiKey": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Normalized rental apartment payload",
+            "headers": {
+              "x-data-source": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Data source marker",
+                "example": "live-onoffice"
+              },
+              "x-ratelimit-limit": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-ratelimit-remaining": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-ratelimit-reset": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApartmentListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but not authorized for this endpoint",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another live onOffice sync is already running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "retry-after": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Upstream fetch or mapping failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Partner API key auth is not configured on the server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/apartments/onsale": {
+      "get": {
+        "tags": [
+          "Apartments"
+        ],
+        "summary": "Fetch live on-sale apartments",
+        "description": "Returns only apartments available for sale to the authenticated partner.",
+        "security": [
+          {
+            "partnerApiKey": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Normalized on-sale apartment payload",
+            "headers": {
+              "x-data-source": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Data source marker",
+                "example": "live-onoffice"
+              },
+              "x-ratelimit-limit": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-ratelimit-remaining": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-ratelimit-reset": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApartmentListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but not authorized for this endpoint",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another live onOffice sync is already running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "retry-after": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Upstream fetch or mapping failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Partner API key auth is not configured on the server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/apartments/{id}": {
+      "get": {
+        "tags": [
+          "Apartments"
+        ],
+        "summary": "Fetch a single apartment by id",
+        "description": "Returns one apartment from the authenticated partner dataset by id.",
+        "security": [
+          {
+            "partnerApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Apartment identifier.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Normalized apartment payload",
+            "headers": {
+              "x-data-source": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Data source marker",
+                "example": "live-onoffice"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApartmentDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but not authorized for this endpoint",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Apartment not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Upstream fetch or mapping failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Partner API key auth is not configured on the server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -135,7 +466,7 @@
         "type": "apiKey",
         "in": "header",
         "name": "X-API-Key",
-        "description": "Partner API key. The key must be active and include the `apartments:read` scope."
+        "description": "Partner API key used to authenticate requests."
       }
     },
     "schemas": {
@@ -144,7 +475,9 @@
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["error"]
+            "enum": [
+              "error"
+            ]
           },
           "code": {
             "type": "string",
@@ -152,10 +485,14 @@
           },
           "message": {
             "type": "string",
-            "example": "Missing required API key scope: apartments:read."
+            "example": "You are not authorized to access this resource."
           }
         },
-        "required": ["status", "code", "message"]
+        "required": [
+          "status",
+          "code",
+          "message"
+        ]
       },
       "ApartmentListResponse": {
         "type": "object",
@@ -170,7 +507,10 @@
             "$ref": "#/components/schemas/ResponseMeta"
           }
         },
-        "required": ["apartments", "meta"]
+        "required": [
+          "apartments",
+          "meta"
+        ]
       },
       "Apartment": {
         "type": "object",
@@ -295,7 +635,13 @@
             "nullable": true
           }
         },
-        "required": ["buildingNumber", "streetName", "neighborhood", "city", "zipCode"]
+        "required": [
+          "buildingNumber",
+          "streetName",
+          "neighborhood",
+          "city",
+          "zipCode"
+        ]
       },
       "Photo": {
         "type": "object",
@@ -328,7 +674,13 @@
             ]
           }
         },
-        "required": ["url", "type", "title", "originalname", "modified"]
+        "required": [
+          "url",
+          "type",
+          "title",
+          "originalname",
+          "modified"
+        ]
       },
       "Features": {
         "type": "object",
@@ -347,7 +699,11 @@
             "nullable": true
           }
         },
-        "required": ["elevator", "balcony", "furnished"]
+        "required": [
+          "elevator",
+          "balcony",
+          "furnished"
+        ]
       },
       "Availability": {
         "type": "object",
@@ -363,7 +719,10 @@
             "example": "2026-12-31"
           }
         },
-        "required": ["from", "until"]
+        "required": [
+          "from",
+          "until"
+        ]
       },
       "Rent": {
         "type": "object",
@@ -383,7 +742,11 @@
             "example": "EUR"
           }
         },
-        "required": ["warmRent", "coldRent", "currency"]
+        "required": [
+          "warmRent",
+          "coldRent",
+          "currency"
+        ]
       },
       "ResponseMeta": {
         "type": "object",
@@ -413,7 +776,29 @@
             "example": 3000
           }
         },
-        "required": ["requestedBy", "authType", "count", "startedAt", "finishedAt", "durationMs"]
+        "required": [
+          "requestedBy",
+          "authType",
+          "count",
+          "startedAt",
+          "finishedAt",
+          "durationMs"
+        ]
+      },
+      "ApartmentDetailResponse": {
+        "type": "object",
+        "properties": {
+          "apartment": {
+            "$ref": "#/components/schemas/Apartment"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "required": [
+          "apartment",
+          "meta"
+        ]
       }
     }
   }

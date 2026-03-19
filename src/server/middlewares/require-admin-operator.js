@@ -1,9 +1,9 @@
 'use strict';
 
 const { userHasAdminConsoleAccess } = require('../../../lib/admin/admin-access');
-const { getUserProfile, isAuthConfigured } = require('../../../lib/auth-service');
+const { getUserProfile, isAuthConfigured } = require('../../../lib/auth/auth-service');
 const { getCookie, serializeCookie } = require('../../../lib/cookies');
-const { verifyAccessToken } = require('../../../lib/jwt');
+const { verifyAccessToken } = require('../../../lib/auth/jwt');
 const { PublicError } = require('../errors/public-error');
 const { extractBearerToken } = require('./require-auth');
 

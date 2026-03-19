@@ -3,7 +3,7 @@
   "info": {
     "title": "Hope Apartments API",
     "version": "1.0.0",
-    "description": "Internal and partner API documentation for the Hope Apartments service. Partner apartment access uses `X-API-Key` plus API key scopes. Internal routes use Bearer JWT or the admin session cookie where documented."
+    "description": "Internal and partner API documentation for the Hope Apartments service. Partner apartment access uses `X-API-Key` plus API key scopes. Internal routes accept Bearer JWT or the admin session cookie where documented. When using `/docs` in a logged-in admin browser session, Swagger requests can rely on that existing session automatically."
   },
   "tags": [
     {
@@ -30,7 +30,9 @@
   "paths": {
     "/health": {
       "get": {
-        "tags": ["System"],
+        "tags": [
+          "System"
+        ],
         "summary": "Health check",
         "responses": {
           "200": {
@@ -48,9 +50,11 @@
     },
     "/openapi.json": {
       "get": {
-        "tags": ["System"],
+        "tags": [
+          "System"
+        ],
         "summary": "Internal OpenAPI specification",
-        "description": "Protected internal OpenAPI document. Requires internal permission `docs:read_internal`.",
+        "description": "Protected internal OpenAPI document. Requires internal permission `docs:read_internal`. When opened from an authenticated admin browser session, the existing admin session can be used automatically.",
         "security": [
           {
             "bearerAuth": []
@@ -106,9 +110,11 @@
     },
     "/docs": {
       "get": {
-        "tags": ["System"],
+        "tags": [
+          "System"
+        ],
         "summary": "Internal Swagger UI",
-        "description": "Protected internal Swagger UI. Requires internal permission `docs:read_internal`.",
+        "description": "Protected internal Swagger UI. Requires internal permission `docs:read_internal`. If you are already logged in as admin, the browser session is enough to try internal endpoints without manually entering a Bearer token or session cookie.",
         "security": [
           {
             "bearerAuth": []
@@ -164,7 +170,9 @@
     },
     "/openapi.public.json": {
       "get": {
-        "tags": ["System"],
+        "tags": [
+          "System"
+        ],
         "summary": "Public partner OpenAPI specification",
         "responses": {
           "200": {
@@ -182,7 +190,9 @@
     },
     "/docs/public": {
       "get": {
-        "tags": ["System"],
+        "tags": [
+          "System"
+        ],
         "summary": "Public partner Swagger UI",
         "responses": {
           "200": {
@@ -200,7 +210,9 @@
     },
     "/auth/login": {
       "post": {
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Login with email and password",
         "requestBody": {
           "required": true,
@@ -268,7 +280,9 @@
     },
     "/auth/refresh": {
       "post": {
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Refresh JWT session",
         "requestBody": {
           "required": true,
@@ -326,7 +340,9 @@
     },
     "/auth/logout": {
       "post": {
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Revoke refresh token",
         "requestBody": {
           "required": true,
@@ -367,7 +383,9 @@
     },
     "/auth/me": {
       "get": {
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Current authenticated user",
         "security": [
           {
@@ -418,17 +436,27 @@
         }
       }
     },
-    "/apartments": {
+    "/api/v1/apartments": {
       "get": {
-        "tags": ["Apartments"],
-        "summary": "Fetch live apartment data",
-        "description": "Returns normalized apartments from onOffice. Requires a valid `X-API-Key` with the `apartments:read` scope.",
-        "security": [
+        "tags": [
+          "Apartments"
+        ],
+        "summary": "Fetch all live apartments",
+        "description": "Returns normalized apartments from onOffice without applying the rental-only source filter. Requires a valid `X-API-Key` with the `apartments:read` scope.",
+        "parameters": [
           {
-            "partnerApiKey": []
+            "name": "X-API-Key",
+            "in": "header",
+            "required": true,
+            "description": "Partner API key used to call the apartments endpoint.",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
-        "x-required-scopes": ["apartments:read"],
+        "x-required-scopes": [
+          "apartments:read"
+        ],
         "responses": {
           "200": {
             "description": "Normalized apartment payload",
@@ -534,9 +562,265 @@
         }
       }
     },
+    "/api/v1/apartments/rental": {
+      "get": {
+        "tags": [
+          "Apartments"
+        ],
+        "summary": "Fetch live rental apartments",
+        "description": "Returns only rental apartments using the rental-specific onOffice source filter. Requires a valid `X-API-Key` with either the `apartments:read` or `apartments:rental:read` scope.",
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": true,
+            "description": "Partner API key used to call the apartments endpoint.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-required-scopes": [
+          "apartments:read",
+          "apartments:rental:read"
+        ],
+        "responses": {
+          "200": {
+            "description": "Normalized rental apartment payload",
+            "headers": {
+              "x-data-source": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Data source marker",
+                "example": "live-onoffice"
+              },
+              "x-ratelimit-limit": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-ratelimit-remaining": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-ratelimit-reset": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApartmentListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Valid API key without either the `apartments:read` or `apartments:rental:read` scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another live onOffice sync is already running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "retry-after": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Upstream fetch or mapping failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "API key auth is not configured on the server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/apartments/onsale": {
+      "get": {
+        "tags": [
+          "Apartments"
+        ],
+        "summary": "Fetch live on-sale apartments",
+        "description": "Returns only apartments matched by the on-sale onOffice source filter (`veroeffentlichen = 1` and `exclusive = 1`). Requires a valid `X-API-Key` with either the `apartments:read` or `apartments:sale:read` scope.",
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": true,
+            "description": "Partner API key used to call the apartments endpoint.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-required-scopes": [
+          "apartments:read",
+          "apartments:sale:read"
+        ],
+        "responses": {
+          "200": {
+            "description": "Normalized on-sale apartment payload",
+            "headers": {
+              "x-data-source": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Data source marker",
+                "example": "live-onoffice"
+              },
+              "x-ratelimit-limit": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-ratelimit-remaining": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-ratelimit-reset": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApartmentListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Valid API key without either the `apartments:read` or `apartments:sale:read` scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another live onOffice sync is already running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "retry-after": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Upstream fetch or mapping failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "API key auth is not configured on the server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api-keys": {
       "get": {
-        "tags": ["API Keys"],
+        "tags": [
+          "API Keys"
+        ],
         "summary": "List API keys",
         "description": "Lists partner API keys. Requires internal permission `api_keys:read`. Accessible to `admin` and `developer` with the current permission matrix.",
         "security": [
@@ -592,7 +876,9 @@
         }
       },
       "post": {
-        "tags": ["API Keys"],
+        "tags": [
+          "API Keys"
+        ],
         "summary": "Create API key",
         "description": "Creates a partner API key. Requires internal permission `api_keys:create`. With the current permission matrix this is effectively admin-only.",
         "security": [
@@ -670,7 +956,9 @@
     },
     "/api-keys/stats": {
       "get": {
-        "tags": ["API Keys"],
+        "tags": [
+          "API Keys"
+        ],
         "summary": "API key usage and lifecycle stats",
         "description": "Returns operational metrics for partner API keys. Requires internal permission `api_keys:read`. Accessible to `admin` and `developer`.",
         "security": [
@@ -728,7 +1016,9 @@
     },
     "/api-keys/{id}": {
       "get": {
-        "tags": ["API Keys"],
+        "tags": [
+          "API Keys"
+        ],
         "summary": "Read API key by public identifier",
         "description": "Reads a partner API key. Requires internal permission `api_keys:read`. Accessible to `admin` and `developer`.",
         "security": [
@@ -816,7 +1106,9 @@
         }
       },
       "patch": {
-        "tags": ["API Keys"],
+        "tags": [
+          "API Keys"
+        ],
         "summary": "Update API key",
         "description": "Updates a partner API key. Requires internal permission `api_keys:update`. With the current permission matrix this is effectively admin-only.",
         "security": [
@@ -916,7 +1208,9 @@
     },
     "/api-keys/{id}/revoke": {
       "post": {
-        "tags": ["API Keys"],
+        "tags": [
+          "API Keys"
+        ],
         "summary": "Revoke API key",
         "description": "Revokes a partner API key. Requires internal permission `api_keys:revoke`. With the current permission matrix this is effectively admin-only.",
         "security": [
@@ -1006,7 +1300,9 @@
     },
     "/api-keys/{id}/reactivate": {
       "post": {
-        "tags": ["API Keys"],
+        "tags": [
+          "API Keys"
+        ],
         "summary": "Reactivate API key",
         "description": "Reactivates a partner API key. Requires internal permission `api_keys:update`. With the current permission matrix this is effectively admin-only.",
         "security": [
@@ -1096,7 +1392,9 @@
     },
     "/api-keys/{id}/rotate": {
       "post": {
-        "tags": ["API Keys"],
+        "tags": [
+          "API Keys"
+        ],
         "summary": "Rotate API key",
         "description": "Rotates a partner API key, returns a new secret once and revokes the previous key atomically. Requires internal permission `api_keys:rotate`. With the current permission matrix this is effectively admin-only.",
         "security": [
@@ -1186,7 +1484,9 @@
     },
     "/audit-logs": {
       "get": {
-        "tags": ["Audit Logs"],
+        "tags": [
+          "Audit Logs"
+        ],
         "summary": "List audit logs",
         "description": "Returns audit log entries. Requires internal permission `audit_logs:read`. Accessible to `admin` and `developer` with the current permission matrix.",
         "security": [
@@ -1312,6 +1612,109 @@
           }
         }
       }
+    },
+    "/api/v1/apartments/{id}": {
+      "get": {
+        "tags": [
+          "Apartments"
+        ],
+        "summary": "Fetch a single apartment by id",
+        "description": "Returns one normalized apartment from the live partner dataset by id. Requires a valid `X-API-Key` with the `apartments:read` scope.",
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": true,
+            "description": "Partner API key used to call the apartments endpoint.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Apartment identifier.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-required-scopes": [
+          "apartments:read"
+        ],
+        "responses": {
+          "200": {
+            "description": "Normalized apartment payload",
+            "headers": {
+              "x-data-source": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Data source marker",
+                "example": "live-onoffice"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApartmentDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Valid API key without the required `apartments:read` scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Apartment not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Upstream fetch or mapping failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "API key auth is not configured on the server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1320,7 +1723,7 @@
         "type": "apiKey",
         "in": "header",
         "name": "X-API-Key",
-        "description": "Partner API key. For `/apartments` the key must also include the `apartments:read` scope."
+        "description": "Partner API key. The key must be active and include one of the documented apartment read scopes for the endpoint being called."
       },
       "bearerAuth": {
         "type": "http",
@@ -1331,7 +1734,7 @@
         "type": "apiKey",
         "in": "cookie",
         "name": "hope_admin_session",
-        "description": "Admin session cookie issued by `/admin/login`."
+        "description": "Admin session cookie issued by `/admin/login`. In the internal Swagger UI this cookie is sent automatically when the browser already has an active admin session."
       }
     },
     "schemas": {
@@ -1340,7 +1743,9 @@
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["error"]
+            "enum": [
+              "error"
+            ]
           },
           "code": {
             "type": "string",
@@ -1351,7 +1756,11 @@
             "example": "Invalid API key scopes."
           }
         },
-        "required": ["status", "code", "message"]
+        "required": [
+          "status",
+          "code",
+          "message"
+        ]
       },
       "HealthResponse": {
         "type": "object",
@@ -1367,12 +1776,13 @@
           "now": {
             "type": "string",
             "format": "date-time"
-          },
-          "authEnabled": {
-            "type": "boolean"
           }
         },
-        "required": ["status", "uptimeSec", "now", "authEnabled"]
+        "required": [
+          "status",
+          "uptimeSec",
+          "now"
+        ]
       },
       "AuthLoginRequest": {
         "type": "object",
@@ -1386,7 +1796,10 @@
             "minLength": 1
           }
         },
-        "required": ["email", "password"]
+        "required": [
+          "email",
+          "password"
+        ]
       },
       "RefreshTokenRequest": {
         "type": "object",
@@ -1396,7 +1809,9 @@
             "minLength": 1
           }
         },
-        "required": ["refreshToken"]
+        "required": [
+          "refreshToken"
+        ]
       },
       "User": {
         "type": "object",
@@ -1428,7 +1843,14 @@
             }
           }
         },
-        "required": ["id", "email", "fullName", "status", "lastLoginAt", "roles"]
+        "required": [
+          "id",
+          "email",
+          "fullName",
+          "status",
+          "lastLoginAt",
+          "roles"
+        ]
       },
       "UserEnvelope": {
         "type": "object",
@@ -1437,7 +1859,9 @@
             "$ref": "#/components/schemas/User"
           }
         },
-        "required": ["user"]
+        "required": [
+          "user"
+        ]
       },
       "AuthSession": {
         "type": "object",
@@ -1493,7 +1917,10 @@
             "$ref": "#/components/schemas/ResponseMeta"
           }
         },
-        "required": ["apartments", "meta"]
+        "required": [
+          "apartments",
+          "meta"
+        ]
       },
       "Apartment": {
         "type": "object",
@@ -1618,7 +2045,13 @@
             "nullable": true
           }
         },
-        "required": ["buildingNumber", "streetName", "neighborhood", "city", "zipCode"]
+        "required": [
+          "buildingNumber",
+          "streetName",
+          "neighborhood",
+          "city",
+          "zipCode"
+        ]
       },
       "Photo": {
         "type": "object",
@@ -1651,7 +2084,13 @@
             ]
           }
         },
-        "required": ["url", "type", "title", "originalname", "modified"]
+        "required": [
+          "url",
+          "type",
+          "title",
+          "originalname",
+          "modified"
+        ]
       },
       "Features": {
         "type": "object",
@@ -1670,7 +2109,11 @@
             "nullable": true
           }
         },
-        "required": ["elevator", "balcony", "furnished"]
+        "required": [
+          "elevator",
+          "balcony",
+          "furnished"
+        ]
       },
       "Availability": {
         "type": "object",
@@ -1686,7 +2129,10 @@
             "example": "2026-12-31"
           }
         },
-        "required": ["from", "until"]
+        "required": [
+          "from",
+          "until"
+        ]
       },
       "Rent": {
         "type": "object",
@@ -1706,7 +2152,11 @@
             "example": "EUR"
           }
         },
-        "required": ["warmRent", "coldRent", "currency"]
+        "required": [
+          "warmRent",
+          "coldRent",
+          "currency"
+        ]
       },
       "ResponseMeta": {
         "type": "object",
@@ -1736,11 +2186,22 @@
             "example": 3000
           }
         },
-        "required": ["requestedBy", "authType", "count", "startedAt", "finishedAt", "durationMs"]
+        "required": [
+          "requestedBy",
+          "authType",
+          "count",
+          "startedAt",
+          "finishedAt",
+          "durationMs"
+        ]
       },
       "ApiKeyScope": {
         "type": "string",
-        "enum": ["apartments:read"]
+        "enum": [
+          "apartments:read",
+          "apartments:rental:read",
+          "apartments:sale:read"
+        ]
       },
       "ApiKeyScopes": {
         "type": "array",
@@ -1762,7 +2223,9 @@
             "uniqueItems": true
           }
         },
-        "required": ["fields"]
+        "required": [
+          "fields"
+        ]
       },
       "PartnerAccessPolicy": {
         "type": "object",
@@ -1864,7 +2327,9 @@
             }
           }
         },
-        "required": ["apiKeys"]
+        "required": [
+          "apiKeys"
+        ]
       },
       "ApiKeyResponse": {
         "type": "object",
@@ -1873,7 +2338,9 @@
             "$ref": "#/components/schemas/ApiKey"
           }
         },
-        "required": ["apiKey"]
+        "required": [
+          "apiKey"
+        ]
       },
       "ApiKeyCreateRequest": {
         "type": "object",
@@ -1911,7 +2378,11 @@
             "description": "Optional expiration timestamp string. The backend does not currently enforce a strict date format."
           }
         },
-        "required": ["partnerId", "name", "scopes"]
+        "required": [
+          "partnerId",
+          "name",
+          "scopes"
+        ]
       },
       "ApiKeyUpdateRequest": {
         "type": "object",
@@ -1955,7 +2426,10 @@
             "description": "Returned once at creation time."
           }
         },
-        "required": ["apiKey", "secret"]
+        "required": [
+          "apiKey",
+          "secret"
+        ]
       },
       "ApiKeyRotateResponse": {
         "type": "object",
@@ -1971,7 +2445,11 @@
             "description": "Returned once at rotation time."
           }
         },
-        "required": ["previousApiKeyId", "apiKey", "secret"]
+        "required": [
+          "previousApiKeyId",
+          "apiKey",
+          "secret"
+        ]
       },
       "ApiKeyStats": {
         "type": "object",
@@ -2017,7 +2495,9 @@
             "$ref": "#/components/schemas/ApiKeyStats"
           }
         },
-        "required": ["stats"]
+        "required": [
+          "stats"
+        ]
       },
       "AuditLog": {
         "type": "object",
@@ -2088,7 +2568,24 @@
             }
           }
         },
-        "required": ["logs"]
+        "required": [
+          "logs"
+        ]
+      },
+      "ApartmentDetailResponse": {
+        "type": "object",
+        "properties": {
+          "apartment": {
+            "$ref": "#/components/schemas/Apartment"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "required": [
+          "apartment",
+          "meta"
+        ]
       }
     }
   }

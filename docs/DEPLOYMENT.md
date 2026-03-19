@@ -37,7 +37,7 @@ Notes:
 - Do not upload your local `.env` to Railway.
 - `PORT` is injected by Railway automatically and is used by the app.
 - Partner access is managed through API keys created via the admin UI or `/api-keys`.
-- `GET /apartments` requires a valid `X-API-Key` with the `apartments:read` scope.
+- `GET /api/v1/apartments` requires a valid `X-API-Key` with the `apartments:read` scope.
 - Internal docs and internal API key management require authenticated internal access; write operations on API keys are admin-only with the current permission matrix.
 
 ## Deploy Steps
@@ -57,7 +57,7 @@ npm start
 
 - `GET /health` returns `200`
 - `GET /docs` loads Swagger UI
-- `GET /apartments` succeeds with a valid `X-API-Key` that includes `apartments:read`
+- `GET /api/v1/apartments` succeeds with a valid `X-API-Key` that includes `apartments:read`
 
 ## Custom Domain
 

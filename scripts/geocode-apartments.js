@@ -3,7 +3,7 @@
 const fs = require('fs/promises');
 const path = require('path');
 
-const { fetchApartmentAddressRecordsLive } = require('../lib/apartment-export');
+const { fetchApartmentAddressRecordsLive } = require('../lib/export/apartment-export-service');
 const {
   buildAddressLabel,
   buildNominatimParams,
@@ -11,7 +11,7 @@ const {
   normalizeCacheKey,
   toGeocodeCsv,
   toOnOfficeImportCsv,
-} = require('../lib/apartment-geocoding');
+} = require('../lib/geocoding/apartment-geocoding');
 const { loadAppEnv } = require('../lib/load-dotenv');
 
 loadAppEnv(process.cwd());

@@ -27,9 +27,12 @@ This project solves a common integration problem:
 2. Partners need a stable JSON payload in your schema.
 3. Access must be controlled per partner with `X-API-Key`.
 
-The API provides a single protected endpoint:
+The versioned partner API currently provides these protected endpoints:
 
-- `GET /apartments`
+- `GET /api/v1/apartments`
+- `GET /api/v1/apartments/rental`
+- `GET /api/v1/apartments/onsale`
+- `GET /api/v1/apartments/:id`
 
 Each request performs a live sync from onOffice and returns transformed apartment data.
 
@@ -44,7 +47,7 @@ Each request performs a live sync from onOffice and returns transformed apartmen
 
 ## Architecture
 
-1. Client calls `GET /apartments` with auth headers.
+1. Client calls `GET /api/v1/apartments` with auth headers.
 2. API validates `X-API-Key`.
 3. API queries onOffice (estates + pictures).
 4. Data is normalized and merged into a single apartments array.
@@ -56,23 +59,34 @@ Each request performs a live sync from onOffice and returns transformed apartmen
 
 ```text
 .
-├── api-server.js                 # Compatibility wrapper for the HTTP server entrypoint
-├── export-apartments.js          # Compatibility wrapper for the CLI export entrypoint
+├── docs/                         # OpenAPI specs, Swagger UI and operational docs
+├── exports/                      # Generated exports and derived files
 ├── lib/
-│   ├── apartment-export.js       # onOffice fetch + transformation logic
-│   └── load-dotenv.js            # Minimal .env loader
+│   ├── apartments/               # Apartment domain, partner projection and source mapping
+│   ├── api-keys/                 # API key models, scopes, service and persistence
+│   ├── audit/                    # Audit service and persistence
+│   ├── auth/                     # Auth services, JWT, password and refresh token helpers
+│   ├── export/                   # Export orchestration and file writers
+│   ├── geocoding/                # Geocoding client and apartment geocoding helpers
+│   ├── onoffice/                 # onOffice API client and integration helpers
+│   ├── admin/                    # Admin access helpers
+│   ├── partners/                 # Partner access policy rules
+│   └── ...                       # Shared platform modules like db, cookies and env loading
 ├── scripts/
 │   ├── export-apartments.js      # CLI JSON export entrypoint
 │   └── geocode-apartments.js     # CLI geocoding/export helper
 ├── src/
 │   ├── server/
-│   │   ├── app.js                # Express app + route wiring
-│   │   └── middlewares/          # HTTP middleware layer
+│   │   ├── app.js                # Express server bootstrap + route wiring
+│   │   ├── middlewares/          # Canonical HTTP middleware layer
+│   │   ├── routes/               # HTTP routes
+│   │   ├── validation/           # Request validation
+│   │   └── ...                   # Controllers, authz, serializers, audit helpers
 │   └── public/
 │       ├── admin/                # Admin static assets
 │       └── site/                 # Public site static assets
-├── exports/                      # Generated exports and derived files
 ├── .env.example
+├── package.json
 └── README.md
 ```
 
@@ -154,14 +168,14 @@ Core variables:
 - `EXPORT_API_PORT`: API port (example: `3000`)
 - `OPENAPI_SERVER_URL`: optional explicit base URL for internal Swagger/OpenAPI responses
 - `OPENAPI_PUBLIC_SERVER_URL`: optional explicit base URL for public Swagger/OpenAPI responses
-- `EXPORT_API_RATE_LIMIT_ENABLED`: optional (`true/false`), enables in-memory rate limiting on `GET /apartments`
+- `EXPORT_API_RATE_LIMIT_ENABLED`: optional (`true/false`), enables in-memory rate limiting on `GET /api/v1/apartments`
 - `EXPORT_API_RATE_LIMIT_WINDOW_SEC`: optional positive integer window in seconds (default `60`)
 - `EXPORT_API_RATE_LIMIT_MAX_REQUESTS`: optional positive integer max requests per window (default `60`)
 - `GEOCODER_USER_AGENT`: required for the bulk geocoding script, should identify your app/contact
 - `GEOCODER_EMAIL`: optional contact email sent to the geocoder
 - `GEOCODER_COUNTRY_CODE`: optional geocoding country filter (default `de`)
 - `GEOCODER_DELAY_MS`: optional delay between requests in ms (default `1100`)
-- `GEOCODER_TIMEOUT_MS`: optional timeout in ms for inline geocoding fallback on `GET /apartments` (default `4000`)
+- `GEOCODER_TIMEOUT_MS`: optional timeout in ms for inline geocoding fallback on `GET /api/v1/apartments` (default `4000`)
 
 ## Run Modes
 
@@ -237,7 +251,10 @@ The `_onoffice-import.csv` file contains only `ImmoNr`, `breitengrad`, and `laen
 - `POST /auth/refresh` (optional, rotates human refresh tokens)
 - `POST /auth/logout` (optional, revokes human refresh tokens)
 - `GET /auth/me` (optional, requires Bearer token)
-- `GET /apartments` (protected, requires `X-API-Key` + `apartments:read`)
+- `GET /api/v1/apartments` (protected, requires `X-API-Key` + `apartments:read`)
+- `GET /api/v1/apartments/rental`
+- `GET /api/v1/apartments/onsale`
+- `GET /api/v1/apartments/:id`
 - `GET /api-keys` (admin/developer)
 - `GET /api-keys/stats` (admin/developer)
 - `POST /api-keys` (admin only)
@@ -267,7 +284,7 @@ The `_onoffice-import.csv` file contains only `ImmoNr`, `breitengrad`, and `laen
 
 ### Auth Endpoints
 
-The current API uses `X-API-Key` for partner access to `GET /apartments`.
+The current API uses `X-API-Key` for partner access to `GET /api/v1/apartments`.
 That API key must include the `apartments:read` scope.
 In parallel, you can enable real user auth backed by PostgreSQL for internal users and admin tooling.
 
@@ -310,7 +327,7 @@ curl -X GET "http://localhost:3000/auth/me" \
 
 ### API Key Endpoints
 
-Partner integrations use `X-API-Key` for `GET /apartments`.
+Partner integrations use `X-API-Key` for `GET /api/v1/apartments`.
 That key must include the `apartments:read` scope.
 
 Create key:
@@ -336,7 +353,7 @@ Use key on apartments:
 ```bash
 API_KEY="hop_live_xxxxxxxxxxxx_yyyyyyyyyyyyyyyy"
 
-curl -X GET "http://localhost:3000/apartments" \
+curl -X GET "http://localhost:3000/api/v1/apartments" \
   -H "X-API-Key: ${API_KEY}"
 ```
 
@@ -395,7 +412,7 @@ Docs access:
 ```bash
 API_KEY="hop_live_xxxxxxxxxxxx_yyyyyyyyyyyyyyyy"
 
-curl -X GET "http://localhost:3000/apartments" \
+curl -X GET "http://localhost:3000/api/v1/apartments" \
   -H "X-API-Key: ${API_KEY}"
 ```
 
@@ -444,7 +461,7 @@ Railway deployment guide:
   - Verify the `X-API-Key` is active and not expired.
   - Verify there are no leading/trailing spaces in the header value.
 - `403 Forbidden`:
-  - For `GET /apartments`, verify the API key includes `apartments:read`.
+  - For `GET /api/v1/apartments`, verify the API key includes `apartments:read`.
   - For internal routes, verify the user has the required internal permission.
 - `409 Conflict`:
   - Another request is currently syncing from onOffice; retry shortly.

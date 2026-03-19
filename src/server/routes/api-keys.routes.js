@@ -12,7 +12,7 @@ const {
   revokeApiKey,
   rotateApiKey,
   updateApiKey,
-} = require('../../../lib/api-key-service');
+} = require('../../../lib/api-keys/api-key-service');
 const { INTERNAL_PERMISSIONS } = require('../authz/internal-permissions');
 const {
   recordApiKeyCreated,

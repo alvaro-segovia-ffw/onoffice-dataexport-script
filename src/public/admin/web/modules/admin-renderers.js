@@ -17,6 +17,10 @@ function isExpired(apiKey) {
   return Boolean(apiKey.expiresAt && new Date(apiKey.expiresAt).getTime() <= Date.now());
 }
 
+function isOperationallyActive(apiKey) {
+  return Boolean(apiKey?.isActive) && !isExpired(apiKey);
+}
+
 function getApiKeyLifecycleLabel(apiKey) {
   if (!apiKey.isActive) return 'revoked';
   if (isExpired(apiKey)) return 'expired';
@@ -78,6 +82,20 @@ function getCurrentAccessFieldDraft() {
     .split(/[\n,]/)
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function setSelectedOptions(select, values) {
+  if (!select) return;
+
+  const selectedValues = new Set(
+    (Array.isArray(values) ? values : [])
+      .map((value) => String(value || '').trim())
+      .filter(Boolean)
+  );
+
+  for (const option of Array.from(select.options || [])) {
+    option.selected = selectedValues.has(option.value);
+  }
 }
 
 export function renderAccessFieldPreview(apiKey) {
@@ -167,6 +185,7 @@ export function renderAuditPartnerOptions(apiKeys) {
   const partnerIds = Array.from(
     new Set(
       (Array.isArray(apiKeys) ? apiKeys : [])
+        .filter((apiKey) => isOperationallyActive(apiKey))
         .map((apiKey) => String(apiKey?.partnerId || '').trim())
         .filter(Boolean)
     )
@@ -174,10 +193,10 @@ export function renderAuditPartnerOptions(apiKeys) {
 
   clearChildren(els.auditPartnerFilter);
 
-  const allOption = document.createElement('option');
-  allOption.value = '';
-  allOption.textContent = 'All partners';
-  els.auditPartnerFilter.appendChild(allOption);
+  const activeOption = document.createElement('option');
+  activeOption.value = '__active__';
+  activeOption.textContent = 'Active partners';
+  els.auditPartnerFilter.appendChild(activeOption);
 
   for (const partnerId of partnerIds) {
     const option = document.createElement('option');
@@ -186,7 +205,15 @@ export function renderAuditPartnerOptions(apiKeys) {
     els.auditPartnerFilter.appendChild(option);
   }
 
-  els.auditPartnerFilter.value = partnerIds.includes(currentValue) ? currentValue : '';
+  const historyOption = document.createElement('option');
+  historyOption.value = '__history__';
+  historyOption.textContent = 'Full history';
+  els.auditPartnerFilter.appendChild(historyOption);
+
+  els.auditPartnerFilter.value =
+    currentValue === '__history__' || currentValue === '__active__' || partnerIds.includes(currentValue)
+      ? currentValue
+      : '__active__';
 }
 
 function normalizeAuditPartner(log) {
@@ -474,6 +501,15 @@ export function renderCreateResult(payload) {
     'helper-copy mb-0'
   );
   appendSecretBlock(card, payload.secret, 'Copy New Secret');
+  const actions = document.createElement('div');
+  actions.className = 'row-actions';
+  const openKeyButton = document.createElement('button');
+  openKeyButton.type = 'button';
+  openKeyButton.className = 'btn btn-outline-admin';
+  openKeyButton.dataset.openCreatedKey = 'true';
+  openKeyButton.textContent = 'Open In Manage Keys';
+  actions.appendChild(openKeyButton);
+  card.appendChild(actions);
   appendResultMeta(card, [
     ['Partner', payload.apiKey?.partnerId || '-'],
     ['Key name', payload.apiKey?.name || '-'],
@@ -586,7 +622,7 @@ export function renderKeyDetail(apiKey) {
   els.keyDetailActions.appendChild(renderKeyActionButtons(apiKey));
 
   els.keyDetailName.value = apiKey.name || '';
-  els.keyDetailScopes.value = Array.isArray(apiKey.scopes) && apiKey.scopes.length ? apiKey.scopes[0] : '';
+  setSelectedOptions(els.keyDetailScopes, Array.isArray(apiKey.scopes) ? apiKey.scopes : []);
   els.keyDetailNotes.value = apiKey.notes || '';
   els.keyDetailExpiresAt.value = toLocalDateTimeInputValue(apiKey.expiresAt);
   els.keyDetailAccessFields.value = Array.isArray(apiKey.accessPolicy?.apartments?.fields)

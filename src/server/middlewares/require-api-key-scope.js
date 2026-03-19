@@ -1,7 +1,7 @@
 'use strict';
 
 const { buildApiKeyScopeDeniedAuditEntry } = require('../audit/audit-recorder');
-const { writeAuditLog } = require('../../../lib/audit-service');
+const { writeAuditLog } = require('../../../lib/audit/audit-service');
 const { PublicError } = require('../errors/public-error');
 
 function getApiKeyScopes(req) {
@@ -16,6 +16,24 @@ function hasRequiredScope(req, requiredScope) {
 
 function requireApiKeyScope(requiredScope, options = {}) {
   const auditLogWriter = options.auditLogWriter || writeAuditLog;
+  const requiredScopes = Array.isArray(requiredScope) ? requiredScope : [requiredScope];
+  const match = options.match === 'all' ? 'all' : 'any';
+  const requiredScopeLabel =
+    typeof options.auditRequiredScope === 'string' && options.auditRequiredScope
+      ? options.auditRequiredScope
+      : requiredScopes.join(match === 'all' ? ' & ' : ' | ');
+  const errorMessage =
+    typeof options.message === 'string' && options.message
+      ? options.message
+      : match === 'all'
+        ? `Missing required API key scopes: ${requiredScopes.join(', ')}.`
+        : `Missing required API key scope: ${requiredScopes.join(' or ')}.`;
+
+  function matchesRequiredScopes(req) {
+    return match === 'all'
+      ? requiredScopes.every((scope) => hasRequiredScope(req, scope))
+      : requiredScopes.some((scope) => hasRequiredScope(req, scope));
+  }
 
   return async function requireApiKeyScopeMiddleware(req, _res, next) {
     if (!req.apiKey && !req.authActor) {
@@ -28,10 +46,10 @@ function requireApiKeyScope(requiredScope, options = {}) {
       );
     }
 
-    if (hasRequiredScope(req, requiredScope)) return next();
+    if (matchesRequiredScopes(req)) return next();
 
     try {
-      await auditLogWriter(buildApiKeyScopeDeniedAuditEntry(req, requiredScope));
+      await auditLogWriter(buildApiKeyScopeDeniedAuditEntry(req, requiredScopeLabel));
     } catch (_err) {
       // Scope enforcement should not fail open or break requests because audit persistence failed.
     }
@@ -40,7 +58,7 @@ function requireApiKeyScope(requiredScope, options = {}) {
       new PublicError({
         statusCode: 403,
         code: 'FORBIDDEN',
-        message: `Missing required API key scope: ${requiredScope}.`,
+        message: errorMessage,
       })
     );
   };

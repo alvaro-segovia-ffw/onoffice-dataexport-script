@@ -3,10 +3,12 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { API_KEY_SCOPES } = require('../lib/api-key-scopes');
+const { API_KEY_SCOPES } = require('../lib/api-keys/api-key-scopes');
 const {
   findPartnerApartmentLiveById,
   listPartnerApartmentsLive,
+  listPartnerOnSaleApartmentsLive,
+  listPartnerRentalApartmentsLive,
   listPartnerApartmentsLiveByCity,
 } = require('../lib/apartments/partner-apartment-service');
 const { projectApartment } = require('../lib/apartments/apartment-projector');
@@ -22,6 +24,9 @@ test('buildPartnerApartmentAccessPolicy defaults to full projection for apartmen
 
   assert.equal(policy.partnerId, 'partner-a');
   assert.equal(policy.canReadApartments, true);
+  assert.equal(policy.canReadAllApartments, true);
+  assert.equal(policy.canReadRentalApartments, true);
+  assert.equal(policy.canReadSaleApartments, true);
   assert.equal(policy.projectionMode, 'full');
   assert.deepEqual(policy.apartmentFieldAllowlist, []);
   assert.deepEqual(policy.accessPolicy, {});
@@ -107,6 +112,80 @@ test('listPartnerApartmentsLive projects fetched apartments using partner access
       },
     },
   ]);
+});
+
+test('listPartnerRentalApartmentsLive uses the rental apartment source and projection policy', async () => {
+  const result = await listPartnerRentalApartmentsLive(
+    {
+      type: 'api_key',
+      id: 'key-1',
+      partnerId: 'partner-a',
+      scopes: [API_KEY_SCOPES.APARTMENTS_READ],
+      apartmentFieldAllowlist: ['id', 'rent.warmRent'],
+    },
+    {
+      fetchApartments: async () => [
+        {
+          id: 'apt-r1',
+          rent: { warmRent: 1200, coldRent: 1000 },
+          address: { city: 'Berlin' },
+        },
+      ],
+    }
+  );
+
+  assert.deepEqual(result.apartments, [
+    {
+      id: 'apt-r1',
+      rent: {
+        warmRent: 1200,
+      },
+    },
+  ]);
+});
+
+test('listPartnerOnSaleApartmentsLive uses the onsale apartment source and projection policy', async () => {
+  const result = await listPartnerOnSaleApartmentsLive(
+    {
+      type: 'api_key',
+      id: 'key-1',
+      partnerId: 'partner-a',
+      scopes: [API_KEY_SCOPES.APARTMENTS_READ],
+      apartmentFieldAllowlist: ['id'],
+    },
+    {
+      fetchApartments: async () => [
+        {
+          id: 'apt-s1',
+          rent: { warmRent: 2200 },
+          address: { city: 'Berlin' },
+        },
+      ],
+    }
+  );
+
+  assert.deepEqual(result.apartments, [{ id: 'apt-s1' }]);
+});
+
+test('buildPartnerApartmentAccessPolicy supports rental-only and sale-only scopes', () => {
+  const rentalPolicy = buildPartnerApartmentAccessPolicy({
+    partnerId: 'partner-r',
+    scopes: [API_KEY_SCOPES.APARTMENTS_RENTAL_READ],
+  });
+  const salePolicy = buildPartnerApartmentAccessPolicy({
+    partnerId: 'partner-s',
+    scopes: [API_KEY_SCOPES.APARTMENTS_SALE_READ],
+  });
+
+  assert.equal(rentalPolicy.canReadApartments, true);
+  assert.equal(rentalPolicy.canReadAllApartments, false);
+  assert.equal(rentalPolicy.canReadRentalApartments, true);
+  assert.equal(rentalPolicy.canReadSaleApartments, false);
+
+  assert.equal(salePolicy.canReadApartments, true);
+  assert.equal(salePolicy.canReadAllApartments, false);
+  assert.equal(salePolicy.canReadRentalApartments, false);
+  assert.equal(salePolicy.canReadSaleApartments, true);
 });
 
 test('findPartnerApartmentLiveById returns one projected apartment when id matches', async () => {
