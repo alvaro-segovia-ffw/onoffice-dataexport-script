@@ -98,16 +98,25 @@
 }
 
 .nav-user {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  max-width: min(100%, 24rem);
   padding: 0.7rem 0.95rem;
   border-radius: 999px;
   background: rgba(68, 46, 119, 0.08);
   color: var(--admin-brand);
   font-family: "Lato", "Segoe UI", sans-serif;
   font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nav-action {
   min-width: 8.1rem;
+  flex: 0 0 auto;
 }
 
 .surface-card {
@@ -218,8 +227,17 @@
     border-top: 1px solid rgba(68, 46, 119, 0.08);
   }
 
+  .nav-session {
+    width: 100%;
+    margin-top: 1rem;
+  }
+
+  .nav-user,
   .nav-action {
     width: 100%;
+    max-width: none;
+    justify-content: flex-start;
+    white-space: normal;
   }
 
   .panel-head,
@@ -231,6 +249,19 @@
   .topline-actions {
     width: 100%;
     justify-content: space-between;
+  }
+}
+
+@media (min-width: 992px) {
+  .admin-navbar .navbar-collapse {
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .nav-session {
+    min-width: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 }
 

@@ -12,8 +12,12 @@
   --admin-accent: #c4a445;
   --admin-accent-dark: #997d29;
   --admin-neutral: #c4c4c4;
-  --admin-ok: #3d7e66;
-  --admin-err: #a64f66;
+  --admin-ok: #35225d;
+  --admin-err: #35225d;
+  --admin-ok-bg: rgba(196, 164, 69, 0.18);
+  --admin-err-bg: rgba(68, 46, 119, 0.14);
+  --admin-ok-border: rgba(196, 164, 69, 0.28);
+  --admin-err-border: rgba(68, 46, 119, 0.22);
   --admin-shadow-soft: 0 18px 44px rgba(42, 27, 77, 0.08);
   --admin-shadow-card: 0 28px 64px rgba(42, 27, 77, 0.1);
 }

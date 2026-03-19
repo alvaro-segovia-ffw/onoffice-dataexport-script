@@ -25,16 +25,24 @@ function buildErrorPageHtml({ statusCode, title, message, requestPath }) {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${statusCode} ${safeTitle} | Hope Apartments</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Lato:wght@300;700&family=Playfair+Display:wght@700&display=swap"
+      rel="stylesheet"
+    />
     <style>
       :root {
-        --bg: #f4efe5;
-        --panel: rgba(255, 250, 242, 0.88);
-        --ink: #1b1712;
-        --muted: #5f5548;
-        --line: rgba(127, 100, 62, 0.18);
-        --brand: #d98e2c;
-        --brand-dark: #a45b08;
-        --shadow: rgba(59, 46, 28, 0.14);
+        --bg: #f7f5fb;
+        --panel: rgba(255, 255, 255, 0.92);
+        --ink: #241d35;
+        --muted: #615b6f;
+        --line: rgba(68, 46, 119, 0.14);
+        --brand: #442e77;
+        --brand-dark: #35225d;
+        --accent: #c4a445;
+        --accent-soft: rgba(196, 164, 69, 0.18);
+        --shadow: rgba(42, 27, 77, 0.14);
       }
 
       * { box-sizing: border-box; }
@@ -46,11 +54,11 @@ function buildErrorPageHtml({ statusCode, title, message, requestPath }) {
         place-items: center;
         padding: 24px;
         color: var(--ink);
-        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        font-family: "Lato", "Segoe UI", sans-serif;
         background:
-          radial-gradient(circle at top left, rgba(217, 142, 44, 0.18), transparent 32%),
-          radial-gradient(circle at 85% 15%, rgba(82, 60, 31, 0.12), transparent 28%),
-          linear-gradient(180deg, rgba(255, 255, 255, 0.35), transparent 18%),
+          radial-gradient(circle at top left, rgba(68, 46, 119, 0.16), transparent 32%),
+          radial-gradient(circle at 88% 12%, rgba(196, 164, 69, 0.18), transparent 24%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.72), transparent 18%),
           var(--bg);
       }
 
@@ -60,14 +68,15 @@ function buildErrorPageHtml({ statusCode, title, message, requestPath }) {
         border: 1px solid var(--line);
         border-radius: 28px;
         background:
-          linear-gradient(180deg, rgba(255, 251, 246, 0.92), rgba(255, 247, 236, 0.82)),
+          radial-gradient(circle at top right, var(--accent-soft), transparent 30%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 242, 251, 0.9)),
           var(--panel);
         box-shadow: 0 32px 70px var(--shadow);
       }
 
       .eyebrow {
         margin: 0 0 10px;
-        color: var(--brand-dark);
+        color: var(--accent);
         font-size: 12px;
         font-weight: 700;
         letter-spacing: 0.16em;
@@ -78,13 +87,15 @@ function buildErrorPageHtml({ statusCode, title, message, requestPath }) {
         margin: 0;
         font-size: clamp(2.6rem, 7vw, 4.8rem);
         line-height: 0.9;
-        font-family: Georgia, serif;
+        font-family: "Playfair Display", Georgia, serif;
+        color: var(--brand);
       }
 
       h2 {
         margin: 10px 0 0;
         font-size: clamp(1.4rem, 4vw, 2rem);
-        font-family: Georgia, serif;
+        font-family: "Playfair Display", Georgia, serif;
+        color: var(--brand);
       }
 
       p {
@@ -95,8 +106,10 @@ function buildErrorPageHtml({ statusCode, title, message, requestPath }) {
       code {
         padding: 0.18rem 0.42rem;
         border-radius: 999px;
-        background: rgba(217, 142, 44, 0.12);
-        color: var(--brand-dark);
+        background: rgba(68, 46, 119, 0.08);
+        color: var(--brand);
+        font-family: "Lato", "Segoe UI", sans-serif;
+        font-weight: 700;
       }
 
       .actions {
@@ -119,13 +132,13 @@ function buildErrorPageHtml({ statusCode, title, message, requestPath }) {
       }
 
       .btn-primary {
-        background: linear-gradient(135deg, var(--brand), #f3b35a);
-        color: #22180d;
+        background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+        color: #ffffff;
       }
 
       .btn-secondary {
-        border-color: rgba(164, 91, 8, 0.28);
-        background: rgba(255, 248, 237, 0.7);
+        border-color: rgba(196, 164, 69, 0.28);
+        background: rgba(255, 255, 255, 0.86);
         color: var(--brand-dark);
       }
 

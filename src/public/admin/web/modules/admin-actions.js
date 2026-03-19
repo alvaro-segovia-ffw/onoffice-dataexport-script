@@ -91,10 +91,10 @@ function parseCommaSeparatedList(value) {
     .filter(Boolean);
 }
 
-function getSelectedValues(select) {
-  if (!select) return [];
-  return Array.from(select.selectedOptions || [])
-    .map((option) => String(option.value || '').trim())
+function getSelectedScopeValues(container) {
+  if (!container) return [];
+  return Array.from(container.querySelectorAll('input[type="checkbox"]:checked'))
+    .map((input) => String(input.value || '').trim())
     .filter(Boolean);
 }
 
@@ -211,7 +211,7 @@ export async function createApiKey(event) {
     partnerId: normalizedPartnerId,
     name: String(form.get('name') || '').trim(),
     role: 'client',
-    scopes: getSelectedValues(els.createScope),
+    scopes: getSelectedScopeValues(els.createScopes),
     notes: form.get('notes') || null,
   };
 
@@ -226,9 +226,12 @@ export async function createApiKey(event) {
     els.createForm.reset();
     els.createPartnerId.value = '';
     els.createName.value = '';
+    const broadScope = els.createScopes?.querySelector('input[value="apartments:read"]');
+    if (broadScope) broadScope.checked = true;
     resetCreatePartnerIdAutofill();
     await Promise.all([loadApiKeys(), loadStats()]);
     await loadAuditLogs({ limit: 20, partnerId: '__active__' });
+    els.createOutput?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (err) {
     setStatus(els.createStatus, 'error', false);
     renderCreateResult({ error: err.message });
@@ -270,6 +273,12 @@ export async function handleKeyAction(event) {
     }
     await Promise.all([loadApiKeys(), loadStats()]);
     await loadAuditLogs({ limit: 20, partnerId: '__active__' });
+    if (action === 'rotate') {
+      els.keyActionOutput?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    if (action === 'delete') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   } catch (err) {
     renderKeyActionResult({ action, error: err.message });
     handleAuthError(err);
@@ -285,7 +294,7 @@ export async function handleKeyDetailSubmit(event) {
 
   const payload = {
     name: String(els.keyDetailName.value || '').trim(),
-    scopes: getSelectedValues(els.keyDetailScopes),
+    scopes: getSelectedScopeValues(els.keyDetailScopes),
     notes: String(els.keyDetailNotes.value || '').trim() || null,
     expiresAt: localDateTimeValueToIso(els.keyDetailExpiresAt.value),
     accessPolicy: buildAccessPolicyFromFields(els.keyDetailAccessFields.value),

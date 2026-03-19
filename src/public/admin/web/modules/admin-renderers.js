@@ -84,17 +84,16 @@ function getCurrentAccessFieldDraft() {
     .filter(Boolean);
 }
 
-function setSelectedOptions(select, values) {
-  if (!select) return;
-
+function setSelectedScopeCheckboxes(container, values) {
+  if (!container) return;
   const selectedValues = new Set(
     (Array.isArray(values) ? values : [])
       .map((value) => String(value || '').trim())
       .filter(Boolean)
   );
 
-  for (const option of Array.from(select.options || [])) {
-    option.selected = selectedValues.has(option.value);
+  for (const input of Array.from(container.querySelectorAll('input[type="checkbox"]') || [])) {
+    input.checked = selectedValues.has(input.value);
   }
 }
 
@@ -622,7 +621,7 @@ export function renderKeyDetail(apiKey) {
   els.keyDetailActions.appendChild(renderKeyActionButtons(apiKey));
 
   els.keyDetailName.value = apiKey.name || '';
-  setSelectedOptions(els.keyDetailScopes, Array.isArray(apiKey.scopes) ? apiKey.scopes : []);
+  setSelectedScopeCheckboxes(els.keyDetailScopes, Array.isArray(apiKey.scopes) ? apiKey.scopes : []);
   els.keyDetailNotes.value = apiKey.notes || '';
   els.keyDetailExpiresAt.value = toLocalDateTimeInputValue(apiKey.expiresAt);
   els.keyDetailAccessFields.value = Array.isArray(apiKey.accessPolicy?.apartments?.fields)

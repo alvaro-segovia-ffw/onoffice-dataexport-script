@@ -7,6 +7,10 @@
   --brand-secondary-soft: rgba(196, 164, 69, 0.16);
   --brand-neutral: #c4c4c4;
   --brand-neutral-soft: rgba(196, 196, 196, 0.24);
+  --status-ok-bg: linear-gradient(135deg, #c4a445, #d8ba66);
+  --status-ok-text: #35225d;
+  --status-err-bg: linear-gradient(135deg, #442e77, #35225d);
+  --status-err-text: #ffffff;
   --surface-base: #f7f5fb;
   --surface-card: rgba(255, 255, 255, 0.9);
   --surface-card-strong: #ffffff;
@@ -192,16 +196,25 @@ p,
 }
 
 .nav-session .nav-user {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  max-width: min(100%, 24rem);
   padding: 0.7rem 0.95rem;
   border-radius: 999px;
   background: var(--brand-primary-soft);
   color: var(--brand-primary);
   font-family: "Lato", "Segoe UI", sans-serif;
   font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nav-action {
   min-width: 8.5rem;
+  flex: 0 0 auto;
 }
 
 .btn-brand,
@@ -480,13 +493,13 @@ p,
 }
 
 .status-pill.is-ok {
-  background: linear-gradient(135deg, #4f8f74, #6aad90);
-  color: #ffffff;
+  background: var(--status-ok-bg);
+  color: var(--status-ok-text);
 }
 
 .status-pill.is-err {
-  background: linear-gradient(135deg, #92435a, #bc657c);
-  color: #ffffff;
+  background: var(--status-err-bg);
+  color: var(--status-err-text);
 }
 
 .status-meta {
@@ -591,8 +604,17 @@ code {
     border-top: 1px solid var(--brand-neutral-soft);
   }
 
+  .nav-session {
+    width: 100%;
+    margin-top: 1rem;
+  }
+
+  .nav-session .nav-user,
   .nav-session .nav-action {
     width: 100%;
+    max-width: none;
+    justify-content: flex-start;
+    white-space: normal;
   }
 
   .hero-title,
@@ -611,6 +633,19 @@ code {
   .trust-grid {
     grid-template-columns: 1fr;
     width: 100%;
+  }
+}
+
+@media (min-width: 992px) {
+  .site-navbar .navbar-collapse {
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .nav-session {
+    min-width: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 }
 

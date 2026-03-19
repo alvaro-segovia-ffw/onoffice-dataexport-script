@@ -8,7 +8,7 @@ export const els = {
   createForm: document.getElementById('createForm'),
   createPartnerId: document.getElementById('createPartnerId'),
   createName: document.getElementById('createName'),
-  createScope: document.getElementById('createScope'),
+  createScopes: document.getElementById('createScopes'),
   btnCreateSubmit: document.getElementById('btnCreateSubmit'),
   createOutput: document.getElementById('createOutput'),
   keysStatus: document.getElementById('keysStatus'),
